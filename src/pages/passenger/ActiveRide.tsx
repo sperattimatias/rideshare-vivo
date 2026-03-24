@@ -18,9 +18,10 @@ interface TripWithDetails extends TripRow {
 interface ActiveRideProps {
   onBack: () => void;
   tripId?: string;
+  onPayTrip?: (tripId: string) => void;
 }
 
-export function ActiveRide({ onBack, tripId }: ActiveRideProps) {
+export function ActiveRide({ onBack, tripId, onPayTrip }: ActiveRideProps) {
   const { user } = useAuth();
   const [trip, setTrip] = useState<TripWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -429,9 +430,19 @@ export function ActiveRide({ onBack, tripId }: ActiveRideProps) {
           <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6 text-center">
             <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-green-900 mb-2">¡Viaje completado!</h3>
-            <p className="text-green-700 mb-4">Esperamos que hayas tenido un buen viaje</p>
-            <Button variant="primary" onClick={onBack} fullWidth>
-              Calificar conductor
+            <p className="text-green-700 mb-4">Completá el pago para finalizar</p>
+            {onPayTrip && (
+              <Button
+                variant="primary"
+                onClick={() => onPayTrip(trip.id)}
+                fullWidth
+                className="mb-3"
+              >
+                Ir a pagar
+              </Button>
+            )}
+            <Button variant="outline" onClick={onBack} fullWidth>
+              Volver al inicio
             </Button>
           </div>
         )}

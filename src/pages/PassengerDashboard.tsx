@@ -8,6 +8,7 @@ import { RequestRide } from './passenger/RequestRide';
 import { ActiveRide } from './passenger/ActiveRide';
 import { RideHistory } from './passenger/RideHistory';
 import { RateTrip } from './passenger/RateTrip';
+import { PayTrip } from './passenger/PayTrip';
 import type { Database } from '../lib/database.types';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
@@ -15,7 +16,7 @@ type PassengerRow = Database['public']['Tables']['passengers']['Row'];
 
 export function PassengerDashboard() {
   const { profile, signOut } = useAuth();
-  const [view, setView] = useState<'dashboard' | 'request' | 'active' | 'history' | 'rate'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'request' | 'active' | 'history' | 'rate' | 'pay'>('dashboard');
   const [selectedTripId, setSelectedTripId] = useState<string | undefined>();
   const [passenger, setPassenger] = useState<PassengerRow | null>(null);
   const [activeTrip, setActiveTrip] = useState<TripRow | null>(null);
@@ -90,12 +91,22 @@ export function PassengerDashboard() {
     setView('active');
   };
 
+  const handlePayTrip = (tripId: string) => {
+    setSelectedTripId(tripId);
+    setView('pay');
+  };
+
+  const handlePaymentComplete = () => {
+    setView('history');
+    fetchPassengerData();
+  };
+
   if (view === 'request') {
     return <RequestRide onBack={() => setView('dashboard')} onSuccess={handleRequestSuccess} />;
   }
 
   if (view === 'active') {
-    return <ActiveRide onBack={() => setView('dashboard')} tripId={selectedTripId} />;
+    return <ActiveRide onBack={() => setView('dashboard')} tripId={selectedTripId} onPayTrip={handlePayTrip} />;
   }
 
   if (view === 'history') {
@@ -104,6 +115,16 @@ export function PassengerDashboard() {
         onBack={() => setView('dashboard')}
         onRateTrip={handleRateTrip}
         onViewTrip={handleViewTrip}
+      />
+    );
+  }
+
+  if (view === 'pay' && selectedTripId) {
+    return (
+      <PayTrip
+        tripId={selectedTripId}
+        onBack={() => setView('dashboard')}
+        onPaymentComplete={handlePaymentComplete}
       />
     );
   }

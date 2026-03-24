@@ -1,0 +1,319 @@
+import { useState, useEffect } from 'react';
+import { ArrowLeft, CreditCard, AlertCircle, CheckCircle, Clock, Loader } from 'lucide-react';
+import { Card } from '../../components/Card';
+import { Button } from '../../components/Button';
+import { supabase } from '../../lib/supabase';
+import { createPaymentPreference, getPaymentStatus } from '../../lib/mercadoPago';
+import type { Database } from '../../lib/database.types';
+
+type TripRow = Database['public']['Tables']['trips']['Row'];
+type DriverRow = Database['public']['Tables']['drivers']['Row'];
+type UserProfileRow = Database['public']['Tables']['user_profiles']['Row'];
+
+interface TripWithDriver extends TripRow {
+  driver: DriverRow & { user_profile: UserProfileRow };
+}
+
+interface PayTripProps {
+  tripId: string;
+  onBack: () => void;
+  onPaymentComplete: () => void;
+}
+
+export function PayTrip({ tripId, onBack, onPaymentComplete }: PayTripProps) {
+  const [trip, setTrip] = useState<TripWithDriver | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+
+  useEffect(() => {
+    fetchTripDetails();
+    checkExistingPayment();
+    const interval = setInterval(checkExistingPayment, 5000);
+    return () => clearInterval(interval);
+  }, [tripId]);
+
+  const fetchTripDetails = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('trips')
+        .select(`
+          *,
+          driver:drivers(
+            *,
+            user_profile:user_profiles(*)
+          )
+        `)
+        .eq('id', tripId)
+        .maybeSingle();
+
+      if (error) throw error;
+      setTrip(data as TripWithDriver);
+    } catch (err) {
+      console.error('Error fetching trip:', err);
+      setError('Error al cargar detalles del viaje');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkExistingPayment = async () => {
+    setCheckingStatus(true);
+    try {
+      const status = await getPaymentStatus(tripId);
+      if (status) {
+        setPaymentStatus(status.status);
+        if (status.status === 'approved') {
+          setTimeout(() => {
+            onPaymentComplete();
+          }, 2000);
+        }
+      }
+    } catch (err) {
+      console.error('Error checking payment:', err);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  const handlePayment = async () => {
+    if (!trip || !trip.driver) {
+      setError('Información del viaje incompleta');
+      return;
+    }
+
+    if (!trip.final_fare) {
+      setError('El viaje no tiene una tarifa calculada');
+      return;
+    }
+
+    if (!trip.driver.mp_seller_id) {
+      setError('El conductor no tiene Mercado Pago vinculado');
+      return;
+    }
+
+    setProcessing(true);
+    setError('');
+
+    try {
+      const totalAmount = trip.final_fare;
+      const driverAmount = totalAmount * 0.80;
+      const platformAmount = totalAmount * 0.20;
+
+      const preference = await createPaymentPreference({
+        tripId: trip.id,
+        amount: totalAmount,
+        driverAmount,
+        platformAmount,
+        driverSellerId: trip.driver.mp_seller_id,
+        description: `Viaje desde ${trip.origin_address} hasta ${trip.destination_address}`,
+      });
+
+      window.location.href = preference.init_point;
+    } catch (err) {
+      console.error('Error creating payment:', err);
+      setError((err as Error).message || 'Error al crear preferencia de pago');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader className="w-8 h-8 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!trip) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <nav className="bg-white shadow-sm sticky top-0 z-10">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <button
+              onClick={onBack}
+              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Volver
+            </button>
+          </div>
+        </nav>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            Viaje no encontrado
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <button
+            onClick={onBack}
+            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Volver
+          </button>
+        </div>
+      </nav>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Pagar Viaje</h1>
+          <p className="text-gray-600">Completá el pago de tu viaje</p>
+        </div>
+
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-2">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {paymentStatus === 'approved' && (
+          <Card className="mb-6 bg-green-50 border-2 border-green-200">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="font-semibold text-green-900 mb-1">Pago Confirmado</h3>
+                <p className="text-green-800 text-sm">
+                  Tu pago ha sido procesado exitosamente. Serás redirigido en breve.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {paymentStatus === 'pending' && (
+          <Card className="mb-6 bg-yellow-50 border-2 border-yellow-200">
+            <div className="flex items-start gap-3">
+              <Clock className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="font-semibold text-yellow-900 mb-1">Pago Pendiente</h3>
+                <p className="text-yellow-800 text-sm">
+                  Tu pago está siendo procesado. Te notificaremos cuando se confirme.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        <Card className="mb-6">
+          <h2 className="text-xl font-semibold mb-4">Detalles del Viaje</h2>
+
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600">Origen</p>
+              <p className="font-medium">{trip.origin_address}</p>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-600">Destino</p>
+              <p className="font-medium">{trip.destination_address}</p>
+            </div>
+
+            <div className="border-t pt-4">
+              <p className="text-sm text-gray-600">Conductor</p>
+              <p className="font-medium">{trip.driver.user_profile.full_name}</p>
+            </div>
+
+            {trip.actual_distance_km && (
+              <div>
+                <p className="text-sm text-gray-600">Distancia recorrida</p>
+                <p className="font-medium">{trip.actual_distance_km.toFixed(2)} km</p>
+              </div>
+            )}
+
+            {trip.actual_duration_minutes && (
+              <div>
+                <p className="text-sm text-gray-600">Duración</p>
+                <p className="font-medium">{trip.actual_duration_minutes} minutos</p>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        <Card>
+          <h2 className="text-xl font-semibold mb-4">Resumen de Pago</h2>
+
+          <div className="space-y-3 mb-6">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Tarifa del viaje</span>
+              <span className="font-medium">${trip.final_fare?.toFixed(2) || '0.00'}</span>
+            </div>
+
+            <div className="border-t pt-3">
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-semibold">Total a pagar</span>
+                <span className="text-2xl font-bold text-blue-600">
+                  ${trip.final_fare?.toFixed(2) || '0.00'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {!paymentStatus && (
+            <>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-2">
+                  <CreditCard className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-900 mb-1">Pago seguro con Mercado Pago</p>
+                    <p className="text-sm text-blue-800">
+                      Serás redirigido a Mercado Pago para completar tu pago de forma segura.
+                      Aceptamos todas las tarjetas de crédito y débito.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={handlePayment}
+                disabled={processing || !trip.final_fare}
+                className="w-full"
+              >
+                {processing ? (
+                  <>
+                    <Loader className="w-5 h-5 mr-2 animate-spin" />
+                    Creando pago...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    Pagar con Mercado Pago
+                  </>
+                )}
+              </Button>
+            </>
+          )}
+
+          {paymentStatus === 'pending' && (
+            <Button
+              onClick={checkExistingPayment}
+              disabled={checkingStatus}
+              variant="secondary"
+              className="w-full"
+            >
+              {checkingStatus ? (
+                <>
+                  <Loader className="w-5 h-5 mr-2 animate-spin" />
+                  Verificando...
+                </>
+              ) : (
+                'Verificar Estado del Pago'
+              )}
+            </Button>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
