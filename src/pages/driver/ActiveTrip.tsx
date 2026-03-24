@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MapPin, User, Phone, Navigation, CheckCircle, Clock, DollarSign, Map } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
@@ -30,12 +30,74 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [useRealMap, setUseRealMap] = useState(false);
+  const locationWatchIdRef = useRef<number | null>(null);
+  const lastLocationUpdateRef = useRef(0);
 
   useEffect(() => {
     fetchActiveTrip();
     const interval = setInterval(fetchActiveTrip, 5000);
     return () => clearInterval(interval);
   }, [driverId]);
+
+  useEffect(() => {
+    if (!trip || !['ACCEPTED', 'DRIVER_ARRIVING', 'DRIVER_ARRIVED', 'IN_PROGRESS'].includes(trip.status)) {
+      if (locationWatchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(locationWatchIdRef.current);
+        locationWatchIdRef.current = null;
+      }
+      return;
+    }
+
+    if (!('geolocation' in navigator) || locationWatchIdRef.current !== null) {
+      return;
+    }
+
+    locationWatchIdRef.current = navigator.geolocation.watchPosition(
+      async (position) => {
+        const now = Date.now();
+        if (now - lastLocationUpdateRef.current < 5000) return;
+        lastLocationUpdateRef.current = now;
+
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        const wktPoint = `POINT(${lon} ${lat})`;
+
+        await supabase
+          .from('drivers')
+          .update({
+            current_location: wktPoint,
+            last_location_update: new Date().toISOString(),
+          })
+          .eq('id', driverId);
+
+        await supabase
+          .from('trip_locations')
+          .insert({
+            trip_id: trip.id,
+            driver_id: driverId,
+            location: wktPoint,
+            speed_kmh: position.coords.speed ? Number(position.coords.speed * 3.6) : null,
+            heading: position.coords.heading ? Number(position.coords.heading) : null,
+            accuracy_meters: Number(position.coords.accuracy),
+          });
+      },
+      (error) => {
+        console.error('Error tracking driver location:', error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 3000,
+      }
+    );
+
+    return () => {
+      if (locationWatchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(locationWatchIdRef.current);
+        locationWatchIdRef.current = null;
+      }
+    };
+  }, [trip?.id, trip?.status, driverId]);
 
   const fetchActiveTrip = async () => {
     try {

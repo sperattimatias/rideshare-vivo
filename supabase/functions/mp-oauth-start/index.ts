@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { encodeHex } from "jsr:@std/encoding/hex";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -74,7 +75,22 @@ Deno.serve(async (req: Request) => {
 
     const redirectUri = `${supabaseUrl}/functions/v1/mp-oauth-callback`;
 
-    const state = `${driver.id}|${Date.now()}`;
+    const nonce = crypto.randomUUID();
+    const rawState = `${driver.id}|${nonce}|${Date.now()}`;
+    const stateSecret = Deno.env.get('MP_OAUTH_STATE_SECRET');
+    if (!stateSecret) {
+      throw new Error('MP_OAUTH_STATE_SECRET no configurado');
+    }
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(stateSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    const signatureBuffer = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawState));
+    const stateSignature = encodeHex(new Uint8Array(signatureBuffer));
+    const state = `${rawState}|${stateSignature}`;
 
     const authUrl = new URL(`${baseUrl}/authorization`);
     authUrl.searchParams.set('client_id', appId);

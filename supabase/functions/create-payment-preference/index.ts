@@ -15,6 +15,13 @@ interface RequestBody {
   description: string;
 }
 
+interface TripPaymentEligibility {
+  id: string;
+  status: string;
+  final_fare: number;
+  passenger: { id: string; user_id: string };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -32,6 +39,21 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'No autorizado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const jwt = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabase.auth.getUser(jwt);
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Sesión inválida' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const body: RequestBody = await req.json();
     const { tripId, amount, driverAmount, platformAmount, driverSellerId, description } = body;
@@ -44,6 +66,35 @@ Deno.serve(async (req: Request) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
+    }
+
+    const { data: tripData, error: tripError } = await supabase
+      .from('trips')
+      .select(`
+        id,
+        status,
+        final_fare,
+        passenger:passengers!inner(id, user_id),
+        driver:drivers!inner(id, mp_seller_id)
+      `)
+      .eq('id', tripId)
+      .maybeSingle();
+
+    if (tripError || !tripData) {
+      throw new Error('Viaje no encontrado');
+    }
+
+    const typedTrip = tripData as unknown as TripPaymentEligibility;
+    if (typedTrip.passenger.user_id !== user.id) {
+      throw new Error('No autorizado para pagar este viaje');
+    }
+
+    if (typedTrip.status !== 'COMPLETED') {
+      throw new Error('El viaje debe estar finalizado antes de pagar');
+    }
+
+    if (Number(typedTrip.final_fare) !== Number(amount)) {
+      throw new Error('Monto inválido para el viaje');
     }
 
     const { data: driverToken, error: tokenError } = await supabase

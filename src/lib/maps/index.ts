@@ -6,6 +6,7 @@ import { getMapsConfig } from './config';
 export * from './types';
 
 let mapProviderInstance: MapProvider | null = null;
+let providerCacheKey: string | null = null;
 
 async function createMapProvider(): Promise<MapProvider> {
   const config = await getMapsConfig();
@@ -33,8 +34,12 @@ async function createMapProvider(): Promise<MapProvider> {
 }
 
 async function getMapProvider(): Promise<MapProvider> {
-  if (!mapProviderInstance) {
+  const currentConfig = await getMapsConfig();
+  const nextKey = `${currentConfig.provider}|${currentConfig.mapboxToken || ''}|${currentConfig.googleMapsApiKey || ''}`;
+
+  if (!mapProviderInstance || providerCacheKey !== nextKey) {
     mapProviderInstance = await createMapProvider();
+    providerCacheKey = nextKey;
   }
   return mapProviderInstance;
 }

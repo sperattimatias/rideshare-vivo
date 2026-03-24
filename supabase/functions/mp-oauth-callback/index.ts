@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { encodeHex } from "jsr:@std/encoding/hex";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,7 +69,30 @@ Deno.serve(async (req: Request) => {
       throw new Error('Código o estado no proporcionado');
     }
 
-    const [driverId] = state.split('|');
+    const [driverId, nonce, timestamp, incomingSignature] = state.split('|');
+    if (!driverId || !nonce || !timestamp || !incomingSignature) {
+      throw new Error('State inválido');
+    }
+
+    const stateSecret = Deno.env.get('MP_OAUTH_STATE_SECRET');
+    if (!stateSecret) {
+      throw new Error('MP_OAUTH_STATE_SECRET no configurado');
+    }
+
+    const rawState = `${driverId}|${nonce}|${timestamp}`;
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(stateSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    const signatureBuffer = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawState));
+    const expectedSignature = encodeHex(new Uint8Array(signatureBuffer));
+
+    if (expectedSignature !== incomingSignature) {
+      throw new Error('State no válido (CSRF)');
+    }
 
     const { data: settings, error: settingsError } = await supabase
       .from('system_settings')

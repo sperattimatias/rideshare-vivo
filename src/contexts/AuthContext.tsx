@@ -73,6 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string, userType: 'PASSENGER' | 'DRIVER' | 'ADMIN') => {
     try {
+      if (userType === 'ADMIN') {
+        throw new Error('No está permitido registrar administradores desde la app pública');
+      }
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
