@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { MapPin, TrendingUp, Clock, DollarSign, RefreshCw, ArrowLeft } from 'lucide-react';
+import { MapPin, TrendingUp, Clock, DollarSign, RefreshCw, ArrowLeft, Map } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { STRINGS } from '../../lib/strings';
+import { LeafletMap } from '../../components/LeafletMap';
 import {
   getDemandHeatmap,
   getHotZones,
@@ -23,6 +24,7 @@ export default function DemandRadar({ onBack }: DemandRadarProps) {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
+  const [useRealMap, setUseRealMap] = useState(false);
 
   useEffect(() => {
     loadHotZones();
@@ -137,6 +139,13 @@ export default function DemandRadar({ onBack }: DemandRadarProps) {
             <p className="text-gray-600 mt-1">Análisis de demanda y mapa de calor por zonas</p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setUseRealMap(!useRealMap)}
+            >
+              <Map className="w-4 h-4 mr-2" />
+              {useRealMap ? 'Mapa Simple' : 'Mapa Real (OSM)'}
+            </Button>
             <Button variant="outline" onClick={loadHotZones}>
               <RefreshCw className="w-4 h-4 mr-2" />
               Actualizar

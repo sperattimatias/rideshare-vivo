@@ -9,12 +9,14 @@ import {
   DollarSign,
   Clock,
   ArrowLeft,
+  Map,
 } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { getOperationalDashboard } from '../../lib/adminOperations';
 import { LiveMap } from '../../components/LiveMap';
+import { LeafletMap } from '../../components/LeafletMap';
 
 interface DashboardStats {
   activeTrips: any[];
@@ -34,6 +36,7 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
   });
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [useRealMap, setUseRealMap] = useState(false);
 
   useEffect(() => {
     loadDashboard();
@@ -121,12 +124,26 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
         <Card className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">Mapa en Tiempo Real</h2>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm text-gray-600">En vivo</span>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setUseRealMap(!useRealMap)}
+              >
+                <Map className="w-4 h-4 mr-2" />
+                {useRealMap ? 'Mapa Simple' : 'Mapa Real (OSM)'}
+              </Button>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-sm text-gray-600">En vivo</span>
+              </div>
             </div>
           </div>
-          <LiveMap className="h-[500px]" />
+          {useRealMap ? (
+            <LeafletMap className="h-[500px]" />
+          ) : (
+            <LiveMap className="h-[500px]" />
+          )}
         </Card>
 
         {/* Key Metrics */}
