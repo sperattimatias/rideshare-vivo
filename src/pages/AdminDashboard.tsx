@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogOut, Users, Car, TrendingUp, DollarSign, AlertCircle, FileText, Settings, Activity, Shield, Brain, MapPin } from 'lucide-react';
+import { LogOut, Users, Car, TrendingUp, DollarSign, AlertCircle, FileText, Settings, Activity, Shield, Brain, MapPin, MessageCircle } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { supabase } from '../lib/supabase';
@@ -16,6 +16,7 @@ import AuditLogs from './admin/AuditLogs';
 import IntelligenceCenter from './admin/IntelligenceCenter';
 import DemandRadar from './admin/DemandRadar';
 import { ServiceZones } from './admin/ServiceZones';
+import { SupportDashboard } from './admin/SupportDashboard';
 
 type AdminView =
   | 'overview'
@@ -29,7 +30,8 @@ type AdminView =
   | 'audit-logs'
   | 'intelligence'
   | 'demand-radar'
-  | 'service-zones';
+  | 'service-zones'
+  | 'support';
 
 export function AdminDashboard() {
   const { profile } = useAuth();
@@ -62,6 +64,10 @@ export function AdminDashboard() {
 
   if (view === 'service-zones') {
     return <ServiceZones onBack={() => setView('overview')} />;
+  }
+
+  if (view === 'support') {
+    return <SupportDashboard />;
   }
 
   if (view === 'driver-verification') {
@@ -135,6 +141,27 @@ export function AdminDashboard() {
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                   <span className="text-xs text-gray-600">Live</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card
+            className="hover:shadow-lg transition-all cursor-pointer group border-2 border-green-200 bg-green-50"
+            onClick={() => setView('support')}
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center group-hover:bg-green-700 transition-colors">
+                <MessageCircle className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">Support Dashboard</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Atención en tiempo real con chat
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-xs text-gray-600">Chat en vivo</span>
                 </div>
               </div>
             </div>
