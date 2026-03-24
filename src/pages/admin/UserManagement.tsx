@@ -51,33 +51,31 @@ export function UserManagement({ onBack }: UserManagementProps) {
           email: authUser?.user?.email || ''
         };
 
-        if (profile.user_type === 'PASSENGER' || filter === 'all') {
-          const { data: passenger } = await supabase
-            .from('passengers')
-            .select('*')
-            .eq('user_id', profile.id)
-            .maybeSingle();
+        const { data: passenger } = await supabase
+          .from('passengers')
+          .select('*')
+          .eq('user_id', profile.id)
+          .maybeSingle();
 
-          if (passenger) {
-            userDetail.passenger = passenger;
-          }
+        if (passenger) {
+          userDetail.passenger = passenger;
         }
 
-        if (profile.user_type === 'DRIVER' || filter === 'all') {
-          const { data: driver } = await supabase
-            .from('drivers')
-            .select('*')
-            .eq('user_id', profile.id)
-            .maybeSingle();
+        const { data: driver } = await supabase
+          .from('drivers')
+          .select('*')
+          .eq('user_id', profile.id)
+          .maybeSingle();
 
-          if (driver) {
-            userDetail.driver = driver;
-          }
+        if (driver) {
+          userDetail.driver = driver;
         }
 
-        if (filter === 'all' ||
-            (filter === 'passengers' && (userDetail.passenger || profile.user_type === 'PASSENGER')) ||
-            (filter === 'drivers' && (userDetail.driver || profile.user_type === 'DRIVER'))) {
+        if (filter === 'all') {
+          usersWithDetails.push(userDetail);
+        } else if (filter === 'passengers' && userDetail.passenger) {
+          usersWithDetails.push(userDetail);
+        } else if (filter === 'drivers' && userDetail.driver) {
           usersWithDetails.push(userDetail);
         }
       }
