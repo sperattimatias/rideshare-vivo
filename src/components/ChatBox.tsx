@@ -149,7 +149,13 @@ export function ChatBox({
             sender_name: userData?.full_name || 'Usuario',
           };
 
-          setMessages((prev) => [...prev, newMsg]);
+          setMessages((prev) => {
+            const exists = prev.some(msg => msg.id === newMsg.id);
+            if (exists) {
+              return prev;
+            }
+            return [...prev, newMsg];
+          });
 
           if (payload.new.sender_id !== currentUserId) {
             setShowNotification(true);
@@ -187,28 +193,65 @@ export function ChatBox({
 
     if (!newMessage.trim() || sending) return;
 
+    const messageText = newMessage.trim();
+    const tempId = `temp-${Date.now()}`;
+
+    const optimisticMessage: Message = {
+      id: tempId,
+      sender_id: currentUserId,
+      sender_type: currentUserType,
+      message: messageText,
+      message_type: 'TEXT',
+      is_internal_note: false,
+      read_at: null,
+      created_at: new Date().toISOString(),
+      sender_name: 'Tú',
+    };
+
+    setMessages((prev) => [...prev, optimisticMessage]);
+    setNewMessage('');
     setSending(true);
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('support_conversation_messages')
         .insert([
           {
             conversation_id: conversationId,
             sender_id: currentUserId,
             sender_type: currentUserType,
-            message: newMessage.trim(),
+            message: messageText,
             message_type: 'TEXT',
             is_internal_note: false,
           },
-        ]);
+        ])
+        .select(`
+          *,
+          user_profiles!support_conversation_messages_sender_id_fkey (
+            full_name
+          )
+        `)
+        .single();
 
       if (error) throw error;
 
-      setNewMessage('');
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempId
+            ? {
+                ...data,
+                sender_name: data.user_profiles?.full_name || 'Usuario'
+              }
+            : msg
+        )
+      );
     } catch (error) {
       console.error('Error sending message:', error);
-      alert('Error al enviar el mensaje');
+
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
+      setNewMessage(messageText);
+
+      alert('Error al enviar el mensaje. Por favor intentá de nuevo.');
     } finally {
       setSending(false);
     }
