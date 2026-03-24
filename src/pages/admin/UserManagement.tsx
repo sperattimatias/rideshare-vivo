@@ -3,6 +3,7 @@ import { ArrowLeft, User, Search, Mail, Phone, Calendar, Shield } from 'lucide-r
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
+import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 
@@ -168,6 +169,14 @@ export function UserManagement({ onBack }: UserManagementProps) {
         </nav>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Breadcrumbs
+            items={[
+              { label: 'Admin', onClick: onBack },
+              { label: 'Gestión de Usuarios', onClick: () => setSelectedUser(null) },
+              { label: selectedUser.full_name }
+            ]}
+          />
+
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-3xl font-bold text-gray-900">Detalles del Usuario</h1>
@@ -313,6 +322,13 @@ export function UserManagement({ onBack }: UserManagementProps) {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Breadcrumbs
+          items={[
+            { label: 'Admin', onClick: onBack },
+            { label: 'Gestión de Usuarios' }
+          ]}
+        />
+
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Usuarios</h1>
           <p className="text-gray-600">Administrar pasajeros y conductores de la plataforma</p>

@@ -3,6 +3,7 @@ import { ArrowLeft, DollarSign, MapPin, Save, AlertCircle, CreditCard, Eye, EyeO
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
+import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 
@@ -193,6 +194,13 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
       </nav>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Breadcrumbs
+          items={[
+            { label: 'Admin', onClick: onBack },
+            { label: 'Configuración del Sistema' }
+          ]}
+        />
+
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Configuración del Sistema</h1>
           <p className="text-gray-600">Gestionar tarifas, pagos y parámetros de la plataforma</p>

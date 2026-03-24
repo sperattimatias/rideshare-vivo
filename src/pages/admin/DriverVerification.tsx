@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, XCircle, AlertCircle, User, Car, FileText, ExternalLink } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 
@@ -224,6 +225,14 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
         </nav>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Breadcrumbs
+            items={[
+              { label: 'Admin', onClick: onBack },
+              { label: 'Verificación de Conductores', onClick: () => setSelectedDriver(null) },
+              { label: profile?.full_name || 'Conductor' }
+            ]}
+          />
+
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-3xl font-bold text-gray-900">Verificación de Conductor</h1>
@@ -485,6 +494,13 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Breadcrumbs
+          items={[
+            { label: 'Admin', onClick: onBack },
+            { label: 'Verificación de Conductores' }
+          ]}
+        />
+
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Verificación de Conductores</h1>
           <p className="text-gray-600">Revisar y aprobar solicitudes de nuevos conductores</p>

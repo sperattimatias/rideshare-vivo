@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
+import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { getOperationalDashboard } from '../../lib/adminOperations';
 
 interface DashboardStats {
@@ -93,6 +94,14 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
             <ArrowLeft className="w-4 h-4 mr-2" />
             Volver al Panel
           </Button>
+
+          <Breadcrumbs
+            items={[
+              { label: 'Admin', onClick: onBack },
+              { label: 'Centro de Operaciones' }
+            ]}
+          />
+
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Centro de Operaciones</h1>

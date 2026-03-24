@@ -14,6 +14,7 @@ import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
 import { Select } from '../../components/Select';
 import { Textarea } from '../../components/Textarea';
+import { Breadcrumbs } from '../../components/Breadcrumbs';
 
 interface Incident {
   id: string;
@@ -171,6 +172,14 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
           <ArrowLeft className="w-4 h-4 mr-2" />
           Volver al Panel
         </Button>
+
+        <Breadcrumbs
+          items={[
+            { label: 'Admin', onClick: onBack },
+            { label: 'Gestión de Incidentes' }
+          ]}
+        />
+
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Gestión de Incidentes</h1>

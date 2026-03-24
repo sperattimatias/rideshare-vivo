@@ -4,6 +4,7 @@ import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Select } from '../../components/Select';
+import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { getRecentAuditLogs } from '../../lib/adminOperations';
 
 interface AuditLog {
@@ -96,6 +97,14 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Volver al Panel
         </Button>
+
+        <Breadcrumbs
+          items={[
+            { label: 'Admin', onClick: onBack },
+            { label: 'Registros de Auditoría' }
+          ]}
+        />
+
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Registros de Auditoría</h1>
           <p className="text-gray-600">

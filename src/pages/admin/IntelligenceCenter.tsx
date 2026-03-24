@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Brain, AlertTriangle, TrendingUp, MapPin, Settings, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
+import { Breadcrumbs } from '../../components/Breadcrumbs';
 import {
   getUnresolvedAlerts,
   resolveAlert,
@@ -112,6 +113,14 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
           <ArrowLeft className="w-4 h-4 mr-2" />
           Volver al Panel
         </Button>
+
+        <Breadcrumbs
+          items={[
+            { label: 'Admin', onClick: onBack },
+            { label: 'Centro de Inteligencia' }
+          ]}
+        />
+
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
