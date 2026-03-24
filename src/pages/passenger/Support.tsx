@@ -22,7 +22,20 @@ import {
   type SupportConversation,
 } from '../../lib/supportSystem';
 
-export function Support() {
+interface SupportProps {
+  onBack: () => void;
+}
+
+const QUICK_QUESTIONS = [
+  { text: '¿Dónde está mi conductor?', category: 'trips' },
+  { text: 'Olvidé algo en el auto', category: 'lost_items' },
+  { text: 'Quiero reportar un problema', category: 'incidents' },
+  { text: 'Necesito una factura', category: 'payments' },
+  { text: 'Cambiar método de pago', category: 'payments' },
+  { text: '¿Cómo funciona la tarifa?', category: 'general' }
+];
+
+export function Support({ onBack }: SupportProps) {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<SupportConversation[]>([]);
   const [departments, setDepartments] = useState<SupportDepartment[]>([]);
@@ -31,6 +44,7 @@ export function Support() {
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
   const [showRating, setShowRating] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showQuickQuestions, setShowQuickQuestions] = useState(true);
 
   const [formData, setFormData] = useState({
     category_id: '',
@@ -64,6 +78,19 @@ export function Support() {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleQuickQuestion = (question: { text: string; category: string }) => {
+    const category = categories.find((cat) => cat.slug === question.category);
+    if (category) {
+      setFormData({
+        category_id: category.id,
+        subject: question.text,
+        description: question.text,
+      });
+      setShowNewConversation(true);
+      setShowQuickQuestions(false);
     }
   };
 
@@ -147,6 +174,9 @@ export function Support() {
         <div className="max-w-4xl mx-auto">
           <div className="mb-4 flex items-center justify-between">
             <div>
+              <Button variant="outline" size="sm" onClick={onBack} className="mb-2">
+                Volver al Dashboard
+              </Button>
               <h1 className="text-2xl font-bold text-gray-900">{conversation?.subject}</h1>
               <p className="text-sm text-gray-600">
                 {conversation?.conversation_number} - {getStatusLabel(conversation?.status || '')}
@@ -207,16 +237,41 @@ export function Support() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Centro de Ayuda</h1>
-            <p className="text-gray-600 mt-1">Iniciá un chat o revisá tus consultas</p>
-          </div>
-          <Button onClick={() => setShowNewConversation(true)}>
-            <Plus className="w-5 h-5 mr-2" />
-            Nueva Consulta
+        <div className="mb-6">
+          <Button variant="outline" size="sm" onClick={onBack} className="mb-4">
+            Volver al Dashboard
           </Button>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Centro de Ayuda</h1>
+              <p className="text-gray-600 mt-1">Iniciá un chat o revisá tus consultas</p>
+            </div>
+            <Button onClick={() => setShowNewConversation(true)}>
+              <Plus className="w-5 h-5 mr-2" />
+              Nueva Consulta
+            </Button>
+          </div>
         </div>
+
+        {showQuickQuestions && conversations.length === 0 && !showNewConversation && (
+          <Card className="mb-6 p-6 bg-gradient-to-br from-blue-50 to-green-50">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Preguntas Frecuentes</h2>
+            <div className="grid md:grid-cols-2 gap-3">
+              {QUICK_QUESTIONS.map((question, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleQuickQuestion(question)}
+                  className="p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-green-500 hover:shadow-md transition-all text-left group"
+                >
+                  <div className="flex items-center gap-3">
+                    <MessageCircle className="w-5 h-5 text-green-600 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm font-medium text-gray-900">{question.text}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {showNewConversation && (
           <Card className="mb-6 p-6">

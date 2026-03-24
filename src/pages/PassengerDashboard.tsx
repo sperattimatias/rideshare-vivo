@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Clock, CreditCard, Car, User, AlertCircle, History } from 'lucide-react';
+import { MapPin, Clock, CreditCard, Car, User, AlertCircle, History, MessageCircle } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,7 @@ import { ActiveRide } from './passenger/ActiveRide';
 import { RideHistory } from './passenger/RideHistory';
 import { RateTrip } from './passenger/RateTrip';
 import { PayTrip } from './passenger/PayTrip';
+import { Support } from './passenger/Support';
 import type { Database } from '../lib/database.types';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
@@ -16,7 +17,7 @@ type PassengerRow = Database['public']['Tables']['passengers']['Row'];
 
 export function PassengerDashboard() {
   const { profile, signOut } = useAuth();
-  const [view, setView] = useState<'dashboard' | 'request' | 'active' | 'history' | 'rate' | 'pay'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'request' | 'active' | 'history' | 'rate' | 'pay' | 'support'>('dashboard');
   const [selectedTripId, setSelectedTripId] = useState<string | undefined>();
   const [passenger, setPassenger] = useState<PassengerRow | null>(null);
   const [activeTrip, setActiveTrip] = useState<TripRow | null>(null);
@@ -139,6 +140,10 @@ export function PassengerDashboard() {
     );
   }
 
+  if (view === 'support') {
+    return <Support onBack={() => setView('dashboard')} />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -156,6 +161,13 @@ export function PassengerDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">VIVO</h1>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setView('support')}
+              className="flex items-center gap-2 text-gray-700 hover:text-green-600 transition-colors"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="hidden sm:inline">Soporte</span>
+            </button>
             <button className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors">
               <User className="w-5 h-5" />
               <span className="hidden sm:inline">{profile?.full_name}</span>

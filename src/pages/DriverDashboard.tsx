@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Car, DollarSign, Star, AlertCircle, User, CheckCircle, XCircle, Clock, TrendingUp, Navigation } from 'lucide-react';
+import { Car, DollarSign, Star, AlertCircle, User, CheckCircle, XCircle, Clock, TrendingUp, Navigation, MessageCircle } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,6 +10,7 @@ import { AvailabilityToggle } from './driver/AvailabilityToggle';
 import { TripRequests } from './driver/TripRequests';
 import { ActiveTrip } from './driver/ActiveTrip';
 import { Earnings } from './driver/Earnings';
+import { Support } from './driver/Support';
 import type { Database } from '../lib/database.types';
 import { calculateDriverEarnings } from '../lib/pricing';
 
@@ -19,7 +20,7 @@ export function DriverDashboard() {
   const { profile, signOut } = useAuth();
   const [driver, setDriver] = useState<DriverRow | null>(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'dashboard' | 'complete' | 'profile' | 'earnings'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'complete' | 'profile' | 'earnings' | 'support'>('dashboard');
   const [weeklyEarnings, setWeeklyEarnings] = useState(0);
 
   useEffect(() => {
@@ -110,6 +111,10 @@ export function DriverDashboard() {
     return <Earnings driverId={driver.id} onBack={() => setView('dashboard')} />;
   }
 
+  if (view === 'support') {
+    return <Support onBack={() => setView('dashboard')} />;
+  }
+
   const profileComplete = driver?.vehicle_plate && driver?.driver_license_number;
 
   const getStatusInfo = () => {
@@ -136,6 +141,13 @@ export function DriverDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">VIVO Conductor</h1>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setView('support')}
+              className="flex items-center gap-2 text-gray-700 hover:text-green-600 transition-colors"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="hidden sm:inline">Soporte</span>
+            </button>
             <button
               onClick={() => setView('profile')}
               className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors"
