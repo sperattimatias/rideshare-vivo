@@ -3,6 +3,7 @@ import { Calendar, Clock, DollarSign, AlertCircle, ArrowLeft } from 'lucide-reac
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { AddressAutocomplete } from '../../components/AddressAutocomplete';
+import { STRINGS } from '../../lib/strings';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { calculateDistanceKm, calculateEstimatedDurationMinutes, formatDistance, formatDuration } from '../../lib/geo';

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { MapPin, User, Phone, Navigation, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
+import { STRINGS } from '../../lib/strings';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { calculateFare } from '../../lib/pricing';
@@ -201,7 +202,7 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
       <Card>
         <div className="text-center py-12">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando...</p>
+          <p className="text-gray-600">{STRINGS.common.loading}</p>
         </div>
       </Card>
     );

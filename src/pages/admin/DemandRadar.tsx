@@ -3,6 +3,7 @@ import { MapPin, TrendingUp, Clock, DollarSign, RefreshCw, ArrowLeft } from 'luc
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
+import { STRINGS } from '../../lib/strings';
 import {
   getDemandHeatmap,
   getHotZones,
@@ -101,7 +102,7 @@ export default function DemandRadar({ onBack }: DemandRadarProps) {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading demand radar...</p>
+          <p className="text-gray-600">{STRINGS.messages.loadingDemandRadar}</p>
         </div>
       </div>
     );

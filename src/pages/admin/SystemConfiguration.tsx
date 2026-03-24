@@ -4,6 +4,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
+import { STRINGS } from '../../lib/strings';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 
@@ -173,7 +174,7 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando configuración...</p>
+          <p className="text-gray-600">{STRINGS.messages.loadingConfiguration}</p>
         </div>
       </div>
     );
