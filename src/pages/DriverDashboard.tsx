@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Car, DollarSign, Star, AlertCircle, User, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Car, DollarSign, Star, AlertCircle, User, CheckCircle, XCircle, Clock, TrendingUp, Navigation } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { CompleteProfile } from './driver/CompleteProfile';
 import { DriverProfile } from './driver/DriverProfile';
+import { AvailabilityToggle } from './driver/AvailabilityToggle';
+import { TripRequests } from './driver/TripRequests';
+import { ActiveTrip } from './driver/ActiveTrip';
+import { Earnings } from './driver/Earnings';
 import type { Database } from '../lib/database.types';
 
 type DriverRow = Database['public']['Tables']['drivers']['Row'];
@@ -14,11 +18,18 @@ export function DriverDashboard() {
   const { profile, signOut } = useAuth();
   const [driver, setDriver] = useState<DriverRow | null>(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'dashboard' | 'complete' | 'profile'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'complete' | 'profile' | 'earnings'>('dashboard');
+  const [weeklyEarnings, setWeeklyEarnings] = useState(0);
 
   useEffect(() => {
     fetchDriverData();
   }, [profile]);
+
+  useEffect(() => {
+    if (driver) {
+      fetchWeeklyEarnings();
+    }
+  }, [driver]);
 
   const fetchDriverData = async () => {
     if (!profile) return;
@@ -39,8 +50,39 @@ export function DriverDashboard() {
     }
   };
 
+  const fetchWeeklyEarnings = async () => {
+    if (!driver) return;
+
+    try {
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - 7);
+
+      const { data, error } = await supabase
+        .from('trips')
+        .select('final_fare')
+        .eq('driver_id', driver.id)
+        .eq('status', 'COMPLETED')
+        .gte('completed_at', weekStart.toISOString());
+
+      if (error) throw error;
+
+      const total = data.reduce(
+        (sum, trip) => sum + (trip.final_fare ? Math.round(trip.final_fare * 0.8) : 0),
+        0
+      );
+
+      setWeeklyEarnings(total);
+    } catch (error) {
+      console.error('Error fetching weekly earnings:', error);
+    }
+  };
+
   const handleCompleteProfile = () => {
     setView('dashboard');
+    fetchDriverData();
+  };
+
+  const handleTripUpdate = () => {
     fetchDriverData();
   };
 
@@ -61,6 +103,10 @@ export function DriverDashboard() {
 
   if (view === 'profile') {
     return <DriverProfile onBack={() => setView('dashboard')} onEdit={() => setView('complete')} />;
+  }
+
+  if (view === 'earnings' && driver) {
+    return <Earnings driverId={driver.id} onBack={() => setView('dashboard')} />;
   }
 
   const profileComplete = driver?.vehicle_plate && driver?.driver_license_number;
@@ -141,12 +187,15 @@ export function DriverDashboard() {
         )}
 
         <div className="grid md:grid-cols-3 gap-6">
-          <Card>
-            <div className="flex items-center gap-3 mb-2">
-              <DollarSign className="w-6 h-6 text-green-600" />
-              <h2 className="text-xl font-semibold">Ganancias</h2>
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setView('earnings')}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <DollarSign className="w-6 h-6 text-green-600" />
+                <h2 className="text-xl font-semibold">Ganancias</h2>
+              </div>
+              <TrendingUp className="w-5 h-5 text-green-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900 mb-1">$0</p>
+            <p className="text-3xl font-bold text-gray-900 mb-1">${weeklyEarnings}</p>
             <p className="text-sm text-gray-600">Esta semana</p>
           </Card>
 
@@ -173,6 +222,30 @@ export function DriverDashboard() {
           </Card>
         </div>
 
+        {driver && profileComplete && driver.can_receive_trips && (
+          <div className="mt-6">
+            <AvailabilityToggle driver={driver} onUpdate={fetchDriverData} />
+          </div>
+        )}
+
+        {driver?.is_on_trip && (
+          <div className="mt-6">
+            <h2 className="text-xl font-semibold mb-4">Viaje Activo</h2>
+            <ActiveTrip driverId={driver.id} onComplete={handleTripUpdate} />
+          </div>
+        )}
+
+        {driver && !driver.is_on_trip && driver.can_receive_trips && (
+          <div className="mt-6">
+            <h2 className="text-xl font-semibold mb-4">Solicitudes de Viaje</h2>
+            <TripRequests
+              driverId={driver.id}
+              isOnline={driver.is_online}
+              onAccept={handleTripUpdate}
+            />
+          </div>
+        )}
+
         <Card className="mt-6">
           <h2 className="text-xl font-semibold mb-4">Estado actual</h2>
           <div className={`bg-${statusInfo.color}-100 rounded-lg p-4 flex items-center gap-3`}>
@@ -181,7 +254,9 @@ export function DriverDashboard() {
               <p className={`font-medium text-${statusInfo.color}-900`}>{statusInfo.text}</p>
               {driver?.can_receive_trips && (
                 <p className={`text-sm text-${statusInfo.color}-700 mt-1`}>
-                  Podés empezar a recibir solicitudes de viaje
+                  {driver.is_online
+                    ? 'Estás en línea y podés recibir solicitudes'
+                    : 'Activá tu disponibilidad para recibir solicitudes'}
                 </p>
               )}
             </div>
