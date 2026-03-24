@@ -39,27 +39,27 @@ export function AdminDashboard() {
   };
 
   if (view === 'operations') {
-    return <OperationalDashboard />;
+    return <OperationalDashboard onBack={() => setView('overview')} />;
   }
 
   if (view === 'incidents') {
-    return <IncidentManagement />;
+    return <IncidentManagement onBack={() => setView('overview')} />;
   }
 
   if (view === 'audit-logs') {
-    return <AuditLogs />;
+    return <AuditLogs onBack={() => setView('overview')} />;
   }
 
   if (view === 'intelligence') {
-    return <IntelligenceCenter />;
+    return <IntelligenceCenter onBack={() => setView('overview')} />;
   }
 
   if (view === 'demand-radar') {
-    return <DemandRadar />;
+    return <DemandRadar onBack={() => setView('overview')} />;
   }
 
   if (view === 'driver-verification') {
-    return <DriverVerificationEnhanced />;
+    return <DriverVerificationEnhanced onBack={() => setView('overview')} />;
   }
 
   if (view === 'analytics') {

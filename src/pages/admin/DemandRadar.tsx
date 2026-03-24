@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, TrendingUp, Clock, DollarSign, RefreshCw } from 'lucide-react';
+import { MapPin, TrendingUp, Clock, DollarSign, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import {
@@ -9,7 +9,11 @@ import {
   type DemandAnalytics,
 } from '../../lib/intelligenceSystem';
 
-export default function DemandRadar() {
+interface DemandRadarProps {
+  onBack: () => void;
+}
+
+export default function DemandRadar({ onBack }: DemandRadarProps) {
   const [hotZones, setHotZones] = useState<DemandAnalytics[]>([]);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [zoneDetails, setZoneDetails] = useState<DemandAnalytics[]>([]);
@@ -105,6 +109,15 @@ export default function DemandRadar() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onBack}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Volver al Panel
+        </Button>
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">

@@ -8,6 +8,7 @@ import {
   MapPin,
   DollarSign,
   Clock,
+  ArrowLeft,
 } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
@@ -19,7 +20,11 @@ interface DashboardStats {
   driversStatus: any[];
 }
 
-export default function OperationalDashboard() {
+interface OperationalDashboardProps {
+  onBack: () => void;
+}
+
+export default function OperationalDashboard({ onBack }: OperationalDashboardProps) {
   const [stats, setStats] = useState<DashboardStats>({
     activeTrips: [],
     openIncidents: [],
@@ -78,16 +83,27 @@ export default function OperationalDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Operations Center</h1>
-            <p className="text-gray-600 mt-1">Real-time platform monitoring</p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-600">Last updated</p>
-            <p className="text-sm font-medium text-gray-900">
-              {lastUpdate.toLocaleTimeString()}
-            </p>
+        <div className="mb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onBack}
+            className="mb-4"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver al Panel
+          </Button>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Operations Center</h1>
+              <p className="text-gray-600 mt-1">Real-time platform monitoring</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600">Last updated</p>
+              <p className="text-sm font-medium text-gray-900">
+                {lastUpdate.toLocaleTimeString()}
+              </p>
+            </div>
           </div>
         </div>
 

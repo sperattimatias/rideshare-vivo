@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download, Eye, FileText } from 'lucide-react';
+import { Search, Filter, Download, Eye, FileText, ArrowLeft } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
@@ -21,7 +21,11 @@ interface AuditLog {
   };
 }
 
-export default function AuditLogs() {
+interface AuditLogsProps {
+  onBack: () => void;
+}
+
+export default function AuditLogs({ onBack }: AuditLogsProps) {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,6 +86,15 @@ export default function AuditLogs() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onBack}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Volver al Panel
+        </Button>
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Audit Logs</h1>
           <p className="text-gray-600">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle, Plus, Search, Filter, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { AlertCircle, Plus, Search, Filter, Clock, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import {
   createIncident,
@@ -40,7 +40,11 @@ interface IncidentAction {
   };
 }
 
-export default function IncidentManagement() {
+interface IncidentManagementProps {
+  onBack: () => void;
+}
+
+export default function IncidentManagement({ onBack }: IncidentManagementProps) {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [incidentActions, setIncidentActions] = useState<IncidentAction[]>([]);
@@ -156,6 +160,15 @@ export default function IncidentManagement() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onBack}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Volver al Panel
+        </Button>
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Incident Management</h1>

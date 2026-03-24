@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Brain, AlertTriangle, TrendingUp, MapPin, Settings, RefreshCw } from 'lucide-react';
+import { Brain, AlertTriangle, TrendingUp, MapPin, Settings, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import {
@@ -13,7 +13,11 @@ import {
 } from '../../lib/intelligenceSystem';
 import { getCurrentAdmin } from '../../lib/adminOperations';
 
-export default function IntelligenceCenter() {
+interface IntelligenceCenterProps {
+  onBack: () => void;
+}
+
+export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) {
   const [alerts, setAlerts] = useState<IntelligentAlert[]>([]);
   const [healthMetrics, setHealthMetrics] = useState<any>(null);
   const [matchingConfig, setMatchingConfig] = useState<MatchingConfig | null>(null);
@@ -99,6 +103,15 @@ export default function IntelligenceCenter() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onBack}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Volver al Panel
+        </Button>
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
