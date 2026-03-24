@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Car, DollarSign, Star, AlertCircle, User, CheckCircle, XCircle, Clock, TrendingUp, Navigation, MessageCircle } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
+import { NotificationCenter } from '../components/NotificationCenter';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { CompleteProfile } from './driver/CompleteProfile';
@@ -175,6 +176,12 @@ export function DriverDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">VIVO Conductor</h1>
           <div className="flex items-center gap-4">
+            <NotificationCenter
+              userId={profile?.id || ''}
+              onNavigate={(link) => {
+                if (link === '/support') setView('support');
+              }}
+            />
             <button
               onClick={() => setView('support')}
               className="relative flex items-center gap-2 text-gray-700 hover:text-green-600 transition-colors"
