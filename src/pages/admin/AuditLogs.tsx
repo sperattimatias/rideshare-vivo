@@ -96,9 +96,9 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
           Volver al Panel
         </Button>
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Audit Logs</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Registros de Auditoría</h1>
           <p className="text-gray-600">
-            Complete audit trail of all administrative actions
+            Historial completo de todas las acciones administrativas
           </p>
         </div>
 
@@ -108,7 +108,7 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
             <Card className="p-4">
               <div className="space-y-4">
                 <Input
-                  placeholder="Search logs..."
+                  placeholder="Buscar registros..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   icon={<Search className="w-5 h-5" />}
@@ -116,14 +116,14 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Entity Type
+                    Tipo de Entidad
                   </label>
                   <select
                     value={entityFilter}
                     onChange={(e) => setEntityFilter(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   >
-                    <option value="all">All Types</option>
+                    <option value="all">Todos los Tipos</option>
                     {entityTypes.map((type) => (
                       <option key={type} value={type}>
                         {type}
@@ -134,7 +134,7 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
 
                 <Button variant="outline" className="w-full">
                   <Download className="w-4 h-4 mr-2" />
-                  Export Logs
+                  Exportar Registros
                 </Button>
               </div>
             </Card>
@@ -142,7 +142,7 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
             {loading ? (
               <div className="text-center py-8">
                 <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading logs...</p>
+                <p className="text-gray-600">Cargando registros...</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto">
@@ -178,7 +178,7 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
                 {filteredLogs.length === 0 && (
                   <Card className="text-center py-8">
                     <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600">No logs found</p>
+                    <p className="text-gray-600">No se encontraron registros</p>
                   </Card>
                 )}
               </div>
@@ -212,20 +212,20 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
 
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Performed By</p>
+                      <p className="text-sm text-gray-600 mb-1">Realizado Por</p>
                       <p className="font-medium text-gray-900">
                         {selectedLog.admin.user.full_name}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Timestamp</p>
+                      <p className="text-sm text-gray-600 mb-1">Fecha y Hora</p>
                       <p className="font-medium text-gray-900">
                         {new Date(selectedLog.created_at).toLocaleString()}
                       </p>
                     </div>
                     {selectedLog.entity_id && (
                       <div className="col-span-2">
-                        <p className="text-sm text-gray-600 mb-1">Entity ID</p>
+                        <p className="text-sm text-gray-600 mb-1">ID de Entidad</p>
                         <p className="font-mono text-sm text-gray-900">
                           {selectedLog.entity_id}
                         </p>
@@ -235,7 +235,7 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
 
                   {selectedLog.old_values && (
                     <div className="border-t pt-4 mb-4">
-                      <h3 className="font-semibold text-gray-900 mb-3">Previous Values</h3>
+                      <h3 className="font-semibold text-gray-900 mb-3">Valores Anteriores</h3>
                       <div className="bg-gray-50 rounded-lg p-4 overflow-x-auto">
                         <pre className="text-xs text-gray-700">
                           {JSON.stringify(selectedLog.old_values, null, 2)}
@@ -246,7 +246,7 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
 
                   {selectedLog.new_values && (
                     <div className="border-t pt-4 mb-4">
-                      <h3 className="font-semibold text-gray-900 mb-3">New Values</h3>
+                      <h3 className="font-semibold text-gray-900 mb-3">Valores Nuevos</h3>
                       <div className="bg-gray-50 rounded-lg p-4 overflow-x-auto">
                         <pre className="text-xs text-gray-700">
                           {JSON.stringify(selectedLog.new_values, null, 2)}
@@ -257,7 +257,7 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
 
                   {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
                     <div className="border-t pt-4">
-                      <h3 className="font-semibold text-gray-900 mb-3">Metadata</h3>
+                      <h3 className="font-semibold text-gray-900 mb-3">Metadatos</h3>
                       <div className="bg-gray-50 rounded-lg p-4 overflow-x-auto">
                         <pre className="text-xs text-gray-700">
                           {JSON.stringify(selectedLog.metadata, null, 2)}
@@ -271,10 +271,10 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
                   <div className="flex items-start gap-3">
                     <Eye className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <h3 className="font-semibold text-blue-900 mb-1">Audit Information</h3>
+                      <h3 className="font-semibold text-blue-900 mb-1">Información de Auditoría</h3>
                       <p className="text-sm text-blue-800">
-                        This action was logged for compliance and security purposes. All audit
-                        logs are immutable and cannot be modified or deleted.
+                        Esta acción fue registrada para propósitos de cumplimiento y seguridad. Todos los
+                        registros de auditoría son inmutables y no pueden ser modificados o eliminados.
                       </p>
                     </div>
                   </div>
@@ -283,7 +283,7 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
             ) : (
               <Card className="p-12 text-center">
                 <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Select a log entry to view details</p>
+                <p className="text-gray-600">Seleccioná un registro para ver los detalles</p>
               </Card>
             )}
           </div>
@@ -292,11 +292,11 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
           <Card className="p-4">
-            <p className="text-sm text-gray-600 mb-1">Total Logs</p>
+            <p className="text-sm text-gray-600 mb-1">Total de Registros</p>
             <p className="text-2xl font-bold text-gray-900">{logs.length}</p>
           </Card>
           <Card className="p-4">
-            <p className="text-sm text-gray-600 mb-1">Filtered Results</p>
+            <p className="text-sm text-gray-600 mb-1">Resultados Filtrados</p>
             <p className="text-2xl font-bold text-gray-900">{filteredLogs.length}</p>
           </Card>
           <Card className="p-4">

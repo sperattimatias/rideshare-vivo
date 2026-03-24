@@ -116,13 +116,13 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
               <Brain className="w-8 h-8 text-blue-600" />
-              Intelligence Center
+              Centro de Inteligencia
             </h1>
-            <p className="text-gray-600 mt-1">AI-powered platform monitoring and optimization</p>
+            <p className="text-gray-600 mt-1">Monitoreo y optimización de plataforma con IA</p>
           </div>
           <Button onClick={loadData} variant="outline">
             <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
+            Actualizar
           </Button>
         </div>
 
@@ -131,10 +131,10 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
           <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-red-100 text-sm mb-1">Unresolved Alerts</p>
+                <p className="text-red-100 text-sm mb-1">Alertas Sin Resolver</p>
                 <p className="text-3xl font-bold">{healthMetrics?.unresolved_alerts || 0}</p>
                 <p className="text-xs text-red-100 mt-1">
-                  {criticalAlerts} critical, {highAlerts} high
+                  {criticalAlerts} críticas, {highAlerts} altas
                 </p>
               </div>
               <AlertTriangle className="w-10 h-10 text-white/30" />
@@ -144,9 +144,9 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
           <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-orange-100 text-sm mb-1">Low Score Drivers</p>
+                <p className="text-orange-100 text-sm mb-1">Conductores Bajo Puntaje</p>
                 <p className="text-3xl font-bold">{healthMetrics?.low_score_drivers || 0}</p>
-                <p className="text-xs text-orange-100 mt-1">Need attention</p>
+                <p className="text-xs text-orange-100 mt-1">Requieren atención</p>
               </div>
               <TrendingUp className="w-10 h-10 text-white/30" />
             </div>
@@ -155,9 +155,9 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
           <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm mb-1">Active Trips</p>
+                <p className="text-blue-100 text-sm mb-1">Viajes Activos</p>
                 <p className="text-3xl font-bold">{healthMetrics?.active_trips || 0}</p>
-                <p className="text-xs text-blue-100 mt-1">In progress now</p>
+                <p className="text-xs text-blue-100 mt-1">En progreso ahora</p>
               </div>
               <MapPin className="w-10 h-10 text-white/30" />
             </div>
@@ -166,9 +166,9 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
           <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-sm mb-1">Online Drivers</p>
+                <p className="text-green-100 text-sm mb-1">Conductores en Línea</p>
                 <p className="text-3xl font-bold">{healthMetrics?.online_drivers || 0}</p>
-                <p className="text-xs text-green-100 mt-1">Available now</p>
+                <p className="text-xs text-green-100 mt-1">Disponibles ahora</p>
               </div>
               <TrendingUp className="w-10 h-10 text-white/30" />
             </div>
@@ -182,21 +182,21 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
             onClick={() => setSelectedTab('alerts')}
           >
             <AlertTriangle className="w-4 h-4 mr-2" />
-            Alerts ({alerts.length})
+            Alertas ({alerts.length})
           </Button>
           <Button
             variant={selectedTab === 'matching' ? 'primary' : 'outline'}
             onClick={() => setSelectedTab('matching')}
           >
             <Settings className="w-4 h-4 mr-2" />
-            Matching Config
+            Config. de Emparejamiento
           </Button>
           <Button
             variant={selectedTab === 'health' ? 'primary' : 'outline'}
             onClick={() => setSelectedTab('health')}
           >
             <Brain className="w-4 h-4 mr-2" />
-            System Health
+            Salud del Sistema
           </Button>
         </div>
 
@@ -206,8 +206,8 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
             {alerts.length === 0 ? (
               <Card className="p-12 text-center">
                 <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">No unresolved alerts</p>
-                <p className="text-sm text-gray-500 mt-2">System is running smoothly</p>
+                <p className="text-gray-600">No hay alertas sin resolver</p>
+                <p className="text-sm text-gray-500 mt-2">El sistema funciona correctamente</p>
               </Card>
             ) : (
               alerts.map((alert) => (
@@ -245,7 +245,7 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
                       size="sm"
                       onClick={() => handleResolveAlert(alert.id)}
                     >
-                      Resolve
+                      Resolver
                     </Button>
                   </div>
                 </Card>
@@ -257,15 +257,15 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
         {/* Matching Config Tab */}
         {selectedTab === 'matching' && matchingConfig && (
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Smart Matching Configuration</h2>
+            <h2 className="text-xl font-semibold mb-4">Configuración de Emparejamiento Inteligente</h2>
             <p className="text-sm text-gray-600 mb-6">
-              Adjust weights to optimize driver-passenger matching. Total weights should equal 1.0
+              Ajustá los pesos para optimizar el emparejamiento conductor-pasajero. Los pesos totales deben sumar 1.0
             </p>
 
             <div className="grid md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Distance Weight ({matchingConfig.distance_weight})
+                  Peso Distancia ({matchingConfig.distance_weight})
                 </label>
                 <input
                   type="range"
@@ -282,13 +282,13 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
                   className="w-full"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  How much to prioritize nearby drivers
+                  Cuánto priorizar conductores cercanos
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Score Weight ({matchingConfig.score_weight})
+                  Peso Puntaje ({matchingConfig.score_weight})
                 </label>
                 <input
                   type="range"
@@ -305,13 +305,13 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
                   className="w-full"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  How much to prioritize high-score drivers
+                  Cuánto priorizar conductores con alto puntaje
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rating Weight ({matchingConfig.rating_weight})
+                  Peso Valoración ({matchingConfig.rating_weight})
                 </label>
                 <input
                   type="range"
@@ -328,13 +328,13 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
                   className="w-full"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  How much to prioritize high-rated drivers
+                  Cuánto priorizar conductores bien valorados
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  History Weight ({matchingConfig.history_weight})
+                  Peso Historial ({matchingConfig.history_weight})
                 </label>
                 <input
                   type="range"
@@ -351,7 +351,7 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
                   className="w-full"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  How much to prioritize familiar drivers
+                  Cuánto priorizar conductores conocidos
                 </p>
               </div>
             </div>
@@ -359,7 +359,7 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
             <div className="grid md:grid-cols-3 gap-6 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Minimum Score
+                  Puntaje Mínimo
                 </label>
                 <input
                   type="number"
@@ -378,7 +378,7 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Trust Mode Threshold
+                  Umbral Modo Confianza
                 </label>
                 <input
                   type="number"
@@ -397,7 +397,7 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Max Distance (km)
+                  Distancia Máxima (km)
                 </label>
                 <input
                   type="number"
@@ -419,7 +419,7 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
             <div className="flex items-center justify-between pt-4 border-t">
               <div>
                 <p className="text-sm font-medium text-gray-900">
-                  Total Weight:{' '}
+                  Peso Total:{' '}
                   {(
                     matchingConfig.distance_weight +
                     matchingConfig.score_weight +
@@ -427,9 +427,9 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
                     matchingConfig.history_weight
                   ).toFixed(2)}
                 </p>
-                <p className="text-xs text-gray-500">Should equal 1.00 for optimal results</p>
+                <p className="text-xs text-gray-500">Debe ser igual a 1.00 para resultados óptimos</p>
               </div>
-              <Button onClick={handleUpdateConfig}>Save Configuration</Button>
+              <Button onClick={handleUpdateConfig}>Guardar Configuración</Button>
             </div>
           </Card>
         )}
@@ -438,17 +438,17 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
         {selectedTab === 'health' && (
           <div className="space-y-6">
             <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">System Status</h2>
+              <h2 className="text-xl font-semibold mb-4">Estado del Sistema</h2>
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-3">Alert Distribution</h3>
+                  <h3 className="font-medium text-gray-900 mb-3">Distribución de Alertas</h3>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Critical</span>
+                      <span className="text-sm text-gray-600">Críticas</span>
                       <span className="text-sm font-medium text-red-600">{criticalAlerts}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">High</span>
+                      <span className="text-sm text-gray-600">Altas</span>
                       <span className="text-sm font-medium text-orange-600">{highAlerts}</span>
                     </div>
                     <div className="flex justify-between">

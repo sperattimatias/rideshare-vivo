@@ -74,7 +74,7 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+          <p className="text-gray-600">Cargando panel de operaciones...</p>
         </div>
       </div>
     );
@@ -95,11 +95,11 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
           </Button>
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Operations Center</h1>
-              <p className="text-gray-600 mt-1">Real-time platform monitoring</p>
+              <h1 className="text-3xl font-bold text-gray-900">Centro de Operaciones</h1>
+              <p className="text-gray-600 mt-1">Monitoreo de plataforma en tiempo real</p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-600">Last updated</p>
+              <p className="text-sm text-gray-600">Última actualización</p>
               <p className="text-sm font-medium text-gray-900">
                 {lastUpdate.toLocaleTimeString()}
               </p>
@@ -112,7 +112,7 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
           <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm mb-1">Active Trips</p>
+                <p className="text-blue-100 text-sm mb-1">Viajes Activos</p>
                 <p className="text-3xl font-bold">{stats.activeTrips.length}</p>
               </div>
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
@@ -124,10 +124,10 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
           <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-sm mb-1">Online Drivers</p>
+                <p className="text-green-100 text-sm mb-1">Conductores en Línea</p>
                 <p className="text-3xl font-bold">{onlineDrivers}</p>
                 <p className="text-xs text-green-100 mt-1">
-                  {activeDrivers} on trip
+                  {activeDrivers} en viaje
                 </p>
               </div>
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
@@ -139,10 +139,10 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
           <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-orange-100 text-sm mb-1">Open Incidents</p>
+                <p className="text-orange-100 text-sm mb-1">Incidentes Abiertos</p>
                 <p className="text-3xl font-bold">{stats.openIncidents.length}</p>
                 <p className="text-xs text-orange-100 mt-1">
-                  {criticalIncidents} critical
+                  {criticalIncidents} críticos
                 </p>
               </div>
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
@@ -154,12 +154,12 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
           <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-100 text-sm mb-1">Total Drivers</p>
+                <p className="text-purple-100 text-sm mb-1">Total Conductores</p>
                 <p className="text-3xl font-bold">{totalDrivers}</p>
                 <p className="text-xs text-purple-100 mt-1">
                   {onlineDrivers > 0
-                    ? `${Math.round((onlineDrivers / totalDrivers) * 100)}% online`
-                    : '0% online'}
+                    ? `${Math.round((onlineDrivers / totalDrivers) * 100)}% en línea`
+                    : '0% en línea'}
                 </p>
               </div>
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
@@ -173,16 +173,16 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
           {/* Active Trips */}
           <Card>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Active Trips</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Viajes Activos</h2>
               <Button variant="outline" size="sm">
-                View All
+                Ver Todos
               </Button>
             </div>
 
             {stats.activeTrips.length === 0 ? (
               <div className="text-center py-8">
                 <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600">No active trips</p>
+                <p className="text-gray-600">No hay viajes activos</p>
               </div>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -196,7 +196,7 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
                         <p className="font-medium text-sm text-gray-900">
                           {trip.passenger_name}
                         </p>
-                        <p className="text-xs text-gray-600">{trip.driver_name || 'Waiting for driver'}</p>
+                        <p className="text-xs text-gray-600">{trip.driver_name || 'Esperando conductor'}</p>
                       </div>
                       <span
                         className={`px-2 py-1 rounded text-xs font-medium ${
@@ -207,13 +207,13 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
                             : 'bg-green-100 text-green-800'
                         }`}
                       >
-                        {trip.status.replace('_', ' ')}
+                        {trip.status === 'REQUESTED' ? 'SOLICITADO' : trip.status === 'IN_PROGRESS' ? 'EN PROGRESO' : trip.status}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-600">
                       <Clock className="w-3 h-3" />
                       <span>
-                        {Math.round(trip.minutes_since_request)} min ago
+                        hace {Math.round(trip.minutes_since_request)} min
                       </span>
                     </div>
                   </div>
@@ -225,16 +225,16 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
           {/* Open Incidents */}
           <Card>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Open Incidents</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Incidentes Abiertos</h2>
               <Button variant="outline" size="sm">
-                View All
+                Ver Todos
               </Button>
             </div>
 
             {stats.openIncidents.length === 0 ? (
               <div className="text-center py-8">
                 <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600">No open incidents</p>
+                <p className="text-gray-600">No hay incidentes abiertos</p>
               </div>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -261,16 +261,16 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
                             : 'bg-blue-100 text-blue-800'
                         }`}
                       >
-                        {incident.severity}
+                        {incident.severity === 'CRITICAL' ? 'CRÍTICO' : incident.severity === 'HIGH' ? 'ALTO' : incident.severity === 'MEDIUM' ? 'MEDIO' : 'BAJO'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-xs text-gray-600">
                       <div className="flex items-center gap-2">
                         <Clock className="w-3 h-3" />
-                        <span>{Math.round(incident.hours_open)}h open</span>
+                        <span>{Math.round(incident.hours_open)}h abierto</span>
                       </div>
                       {incident.assigned_admin_name && (
-                        <span>Assigned to {incident.assigned_admin_name}</span>
+                        <span>Asignado a {incident.assigned_admin_name}</span>
                       )}
                     </div>
                   </div>
@@ -282,7 +282,7 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
 
         {/* Driver Status Breakdown */}
         <Card>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Driver Status</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Estado de Conductores</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {stats.driversStatus.map((status) => (
               <div
@@ -292,7 +292,7 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
                 <p className="text-sm text-gray-600 mb-1">{status.status}</p>
                 <p className="text-2xl font-bold text-gray-900">{status.count}</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {status.online_count} online
+                  {status.online_count} en línea
                 </p>
               </div>
             ))}
@@ -302,7 +302,7 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
         {/* Real-time indicator */}
         <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-600">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span>Live updates every 10 seconds</span>
+          <span>Actualización automática cada 10 segundos</span>
         </div>
       </div>
     </div>

@@ -171,12 +171,12 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
         </Button>
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Incident Management</h1>
-            <p className="text-gray-600 mt-1">Monitor and resolve platform incidents</p>
+            <h1 className="text-3xl font-bold text-gray-900">Gestión de Incidentes</h1>
+            <p className="text-gray-600 mt-1">Monitorear y resolver incidentes de la plataforma</p>
           </div>
           <Button onClick={() => setShowCreateModal(true)}>
             <Plus className="w-5 h-5 mr-2" />
-            New Incident
+            Nuevo Incidente
           </Button>
         </div>
 
@@ -186,7 +186,7 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
             <Card className="p-4">
               <div className="space-y-4">
                 <Input
-                  placeholder="Search incidents..."
+                  placeholder="Buscar incidentes..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   icon={<Search className="w-5 h-5" />}
@@ -198,11 +198,11 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
                     onChange={(e) => setFilterStatus(e.target.value)}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   >
-                    <option value="all">All Status</option>
-                    <option value="OPEN">Open</option>
-                    <option value="INVESTIGATING">Investigating</option>
-                    <option value="RESOLVED">Resolved</option>
-                    <option value="CLOSED">Closed</option>
+                    <option value="all">Todos los Estados</option>
+                    <option value="OPEN">Abierto</option>
+                    <option value="INVESTIGATING">Investigando</option>
+                    <option value="RESOLVED">Resuelto</option>
+                    <option value="CLOSED">Cerrado</option>
                   </select>
 
                   <select
@@ -210,11 +210,11 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
                     onChange={(e) => setFilterSeverity(e.target.value)}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                   >
-                    <option value="all">All Severity</option>
-                    <option value="CRITICAL">Critical</option>
-                    <option value="HIGH">High</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="LOW">Low</option>
+                    <option value="all">Todas las Severidades</option>
+                    <option value="CRITICAL">Crítico</option>
+                    <option value="HIGH">Alto</option>
+                    <option value="MEDIUM">Medio</option>
+                    <option value="LOW">Bajo</option>
                   </select>
                 </div>
               </div>
@@ -275,19 +275,19 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
                   </div>
 
                   <div className="border-t pt-4 mb-4">
-                    <h3 className="font-semibold mb-2">Description</h3>
+                    <h3 className="font-semibold mb-2">Descripción</h3>
                     <p className="text-gray-700">{selectedIncident.description}</p>
                   </div>
 
                   {selectedIncident.trip_id && (
                     <div className="border-t pt-4 mb-4">
-                      <h3 className="font-semibold mb-2">Related Trip</h3>
-                      <p className="text-sm text-gray-600">Trip ID: {selectedIncident.trip_id}</p>
+                      <h3 className="font-semibold mb-2">Viaje Relacionado</h3>
+                      <p className="text-sm text-gray-600">ID de Viaje: {selectedIncident.trip_id}</p>
                     </div>
                   )}
 
                   <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-3">Actions</h3>
+                    <h3 className="font-semibold mb-3">Acciones</h3>
                     <div className="flex flex-wrap gap-2">
                       {selectedIncident.status === 'OPEN' && (
                         <Button
@@ -295,19 +295,19 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
                           onClick={() => handleUpdateStatus('INVESTIGATING')}
                           disabled={loading}
                         >
-                          Start Investigation
+                          Iniciar Investigación
                         </Button>
                       )}
                       {selectedIncident.status === 'INVESTIGATING' && (
                         <>
                           <Button
                             onClick={() => {
-                              const notes = prompt('Enter resolution notes:');
+                              const notes = prompt('Ingresá notas de resolución:');
                               if (notes) handleUpdateStatus('RESOLVED', notes);
                             }}
                             disabled={loading}
                           >
-                            Mark as Resolved
+                            Marcar como Resuelto
                           </Button>
                         </>
                       )}
@@ -316,7 +316,7 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
                           onClick={() => handleUpdateStatus('CLOSED')}
                           disabled={loading}
                         >
-                          Close Incident
+                          Cerrar Incidente
                         </Button>
                       )}
                     </div>
@@ -325,7 +325,7 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
 
                 {/* Timeline */}
                 <Card className="p-6">
-                  <h3 className="font-semibold mb-4">Timeline</h3>
+                  <h3 className="font-semibold mb-4">Línea de Tiempo</h3>
                   <div className="space-y-4">
                     {incidentActions.map((action) => (
                       <div key={action.id} className="flex gap-4">
@@ -360,12 +360,12 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
                     >
                       <textarea
                         name="comment"
-                        placeholder="Add a comment..."
+                        placeholder="Agregar comentario..."
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg resize-none"
                         rows={3}
                       />
                       <Button type="submit" className="mt-2" disabled={loading}>
-                        Add Comment
+                        Agregar Comentario
                       </Button>
                     </form>
                   </div>
@@ -374,7 +374,7 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
             ) : (
               <Card className="p-12 text-center">
                 <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Select an incident to view details</p>
+                <p className="text-gray-600">Seleccioná un incidente para ver los detalles</p>
               </Card>
             )}
           </div>

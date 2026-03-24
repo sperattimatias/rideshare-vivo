@@ -122,42 +122,42 @@ export default function DemandRadar({ onBack }: DemandRadarProps) {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
               <MapPin className="w-8 h-8 text-blue-600" />
-              Demand Radar
+              Radar de Demanda
             </h1>
-            <p className="text-gray-600 mt-1">Zone-based demand analytics and heatmap</p>
+            <p className="text-gray-600 mt-1">Análisis de demanda y mapa de calor por zonas</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={loadHotZones}>
               <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
+              Actualizar
             </Button>
-            <Button onClick={handleAggregateToday}>Aggregate Today</Button>
+            <Button onClick={handleAggregateToday}>Agregar Hoy</Button>
           </div>
         </div>
 
         {/* Legend */}
         <Card className="p-4 mb-6">
-          <h3 className="font-semibold text-gray-900 mb-3">Heat Intensity</h3>
+          <h3 className="font-semibold text-gray-900 mb-3">Intensidad de Calor</h3>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-blue-500 rounded"></div>
-              <span className="text-sm text-gray-600">Low (1-2 trips)</span>
+              <span className="text-sm text-gray-600">Bajo (1-2 viajes)</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-green-500 rounded"></div>
-              <span className="text-sm text-gray-600">Medium (2-5 trips)</span>
+              <span className="text-sm text-gray-600">Medio (2-5 viajes)</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-              <span className="text-sm text-gray-600">High (5-10 trips)</span>
+              <span className="text-sm text-gray-600">Alto (5-10 viajes)</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-orange-500 rounded"></div>
-              <span className="text-sm text-gray-600">Very High (10-20 trips)</span>
+              <span className="text-sm text-gray-600">Muy Alto (10-20 viajes)</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-red-500 rounded"></div>
-              <span className="text-sm text-gray-600">Extreme (20+ trips)</span>
+              <span className="text-sm text-gray-600">Extremo (20+ viajes)</span>
             </div>
           </div>
         </Card>
@@ -167,7 +167,7 @@ export default function DemandRadar({ onBack }: DemandRadarProps) {
           <div className="lg:col-span-1">
             <Card className="p-4">
               <h2 className="font-semibold text-gray-900 mb-4">
-                Hot Zones (Last 7 Days)
+                Zonas Calientes (Últimos 7 Días)
               </h2>
               <div className="space-y-2 max-h-[calc(100vh-350px)] overflow-y-auto">
                 {uniqueZones.map((zone) => {
@@ -192,13 +192,13 @@ export default function DemandRadar({ onBack }: DemandRadarProps) {
                           </span>
                         </div>
                         <span className="text-xs font-semibold text-gray-600">
-                          {total} trips
+                          {total} viajes
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                         <div className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {Math.round(zone.avg_wait_time_seconds / 60)}m wait
+                          {Math.round(zone.avg_wait_time_seconds / 60)}m espera
                         </div>
                         <div className="flex items-center gap-1">
                           <DollarSign className="w-3 h-3" />$
@@ -212,9 +212,9 @@ export default function DemandRadar({ onBack }: DemandRadarProps) {
                 {uniqueZones.length === 0 && (
                   <div className="text-center py-8">
                     <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600 text-sm">No demand data available</p>
+                    <p className="text-gray-600 text-sm">No hay datos de demanda disponibles</p>
                     <p className="text-gray-500 text-xs mt-1">
-                      Click "Aggregate Today" to generate data
+                      Hacé click en "Agregar Hoy" para generar datos
                     </p>
                   </div>
                 )}

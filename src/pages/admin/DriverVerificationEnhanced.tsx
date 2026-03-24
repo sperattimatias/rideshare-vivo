@@ -155,21 +155,21 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
   async function handleReject() {
     if (!selectedDriver) return;
 
-    const reason = prompt('Rejection reason (required):');
+    const reason = prompt('Razón de rechazo (requerida):');
     if (!reason) {
-      alert('Rejection reason is required');
+      alert('La razón de rechazo es requerida');
       return;
     }
 
     setProcessing(true);
     try {
       await rejectDriver(selectedDriver.id, reason);
-      alert('Driver rejected');
+      alert('Conductor rechazado');
       setSelectedDriver(null);
       await fetchDrivers();
     } catch (error) {
       console.error('Error rejecting driver:', error);
-      alert('Failed to reject driver');
+      alert('Error al rechazar conductor');
     } finally {
       setProcessing(false);
     }
@@ -178,21 +178,21 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
   async function handleSuspend() {
     if (!selectedDriver) return;
 
-    const reason = prompt('Suspension reason (required):');
+    const reason = prompt('Razón de suspensión (requerida):');
     if (!reason) {
-      alert('Suspension reason is required');
+      alert('La razón de suspensión es requerida');
       return;
     }
 
     setProcessing(true);
     try {
       await suspendDriver(selectedDriver.id, reason);
-      alert('Driver suspended');
+      alert('Conductor suspendido');
       setSelectedDriver(null);
       await fetchDrivers();
     } catch (error) {
       console.error('Error suspending driver:', error);
-      alert('Failed to suspend driver');
+      alert('Error al suspender conductor');
     } finally {
       setProcessing(false);
     }
@@ -201,18 +201,18 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
   async function handleReactivate() {
     if (!selectedDriver) return;
 
-    const notes = prompt('Reactivation notes (optional):');
+    const notes = prompt('Notas de reactivación (opcional):');
     if (notes === null) return;
 
     setProcessing(true);
     try {
       await reactivateDriver(selectedDriver.id, notes || undefined);
-      alert('Driver reactivated');
+      alert('Conductor reactivado');
       setSelectedDriver(null);
       await fetchDrivers();
     } catch (error) {
       console.error('Error reactivating driver:', error);
-      alert('Failed to reactivate driver');
+      alert('Error al reactivar conductor');
     } finally {
       setProcessing(false);
     }
@@ -224,28 +224,28 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
         return (
           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
             <Clock className="w-3 h-3" />
-            Pending
+            Pendiente
           </span>
         );
       case 'ACTIVE':
         return (
           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircle className="w-3 h-3" />
-            Active
+            Activo
           </span>
         );
       case 'REJECTED':
         return (
           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <XCircle className="w-3 h-3" />
-            Rejected
+            Rechazado
           </span>
         );
       case 'SUSPENDED':
         return (
           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
             <Ban className="w-3 h-3" />
-            Suspended
+            Suspendido
           </span>
         );
       default:
@@ -268,7 +268,7 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
             className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to list
+            Volver a la lista
           </button>
 
           <div className="mb-6">
@@ -285,15 +285,15 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
           </div>
 
           <div className="grid lg:grid-cols-2 gap-6 mb-6">
-            {/* Vehicle Information */}
+            {/* Información del Vehículo */}
             <Card>
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Car className="w-6 h-6 text-blue-600" />
-                Vehicle Information
+                Información del Vehículo
               </h2>
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-gray-600">Vehicle</p>
+                  <p className="text-sm text-gray-600">Vehículo</p>
                   <p className="font-medium">
                     {selectedDriver.vehicle_brand} {selectedDriver.vehicle_model} (
                     {selectedDriver.vehicle_year})
@@ -304,7 +304,7 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
                   <p className="font-medium">{selectedDriver.vehicle_color || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">License Plate</p>
+                  <p className="text-sm text-gray-600">Patente</p>
                   <p className="font-medium">
                     {selectedDriver.vehicle_plate?.toUpperCase() || 'N/A'}
                   </p>
@@ -312,19 +312,19 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
               </div>
             </Card>
 
-            {/* Driver License */}
+            {/* Licencia de Conducir */}
             <Card>
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Shield className="w-6 h-6 text-blue-600" />
-                Driver License
+                Licencia de Conducir
               </h2>
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-gray-600">License Number</p>
+                  <p className="text-sm text-gray-600">Número de Licencia</p>
                   <p className="font-medium">{selectedDriver.driver_license_number || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Expiry Date</p>
+                  <p className="text-sm text-gray-600">Fecha de Vencimiento</p>
                   <p className="font-medium">
                     {selectedDriver.driver_license_expiry
                       ? new Date(selectedDriver.driver_license_expiry).toLocaleDateString()
@@ -342,12 +342,12 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
               </h2>
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-gray-600">Status</p>
+                  <p className="text-sm text-gray-600">Estado</p>
                   <p className="font-medium">{selectedDriver.mp_status || 'PENDING'}</p>
                 </div>
                 {selectedDriver.mp_account_email && (
                   <div>
-                    <p className="text-sm text-gray-600">Account Email</p>
+                    <p className="text-sm text-gray-600">Email de Cuenta</p>
                     <p className="font-medium">{selectedDriver.mp_account_email}</p>
                   </div>
                 )}
@@ -358,40 +358,40 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
             <Card>
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <User className="w-6 h-6 text-blue-600" />
-                Statistics
+                Estadísticas
               </h2>
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-gray-600">Total Trips</p>
+                  <p className="text-sm text-gray-600">Total de Viajes</p>
                   <p className="font-medium">{selectedDriver.total_trips || 0}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Average Rating</p>
+                  <p className="text-sm text-gray-600">Valoración Promedio</p>
                   <p className="font-medium">{selectedDriver.average_rating || 5.0}/5</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Score</p>
+                  <p className="text-sm text-gray-600">Puntaje</p>
                   <p className="font-medium">{selectedDriver.score || 100}/100</p>
                 </div>
               </div>
             </Card>
           </div>
 
-          {/* Documents */}
+          {/* Documentos */}
           <Card className="mb-6">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <FileText className="w-6 h-6 text-blue-600" />
-              Documents
+              Documentos
             </h2>
             <div className="grid md:grid-cols-3 gap-4">
-              {/* Driver License Photo */}
+              {/* Licencia de Conducir Photo */}
               <div>
-                <p className="text-sm font-medium text-gray-900 mb-2">Driver License</p>
+                <p className="text-sm font-medium text-gray-900 mb-2">Licencia de Conducir</p>
                 {selectedDriver.driver_license_photo_url ? (
                   <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
                     <img
                       src={selectedDriver.driver_license_photo_url}
-                      alt="Driver License"
+                      alt="Licencia de Conducir"
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -402,16 +402,16 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
                 )}
               </div>
 
-              {/* Vehicle Registration */}
+              {/* Cédula del Vehículo */}
               <div>
                 <p className="text-sm font-medium text-gray-900 mb-2">
-                  Vehicle Registration
+                  Cédula del Vehículo
                 </p>
                 {selectedDriver.vehicle_registration_photo_url ? (
                   <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
                     <img
                       src={selectedDriver.vehicle_registration_photo_url}
-                      alt="Vehicle Registration"
+                      alt="Cédula del Vehículo"
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -422,14 +422,14 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
                 )}
               </div>
 
-              {/* Insurance */}
+              {/* Seguro */}
               <div>
-                <p className="text-sm font-medium text-gray-900 mb-2">Insurance</p>
+                <p className="text-sm font-medium text-gray-900 mb-2">Seguro</p>
                 {selectedDriver.insurance_photo_url ? (
                   <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
                     <img
                       src={selectedDriver.insurance_photo_url}
-                      alt="Insurance"
+                      alt="Seguro"
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -491,11 +491,11 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
                 <>
                   <Button onClick={handleApprove} disabled={processing || !documentsComplete}>
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Approve Driver
+                    Aprobar Conductor
                   </Button>
                   <Button variant="secondary" onClick={handleReject} disabled={processing}>
                     <XCircle className="w-4 h-4 mr-2" />
-                    Reject
+                    Rechazar
                   </Button>
                 </>
               )}
@@ -503,14 +503,14 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
               {selectedDriver.status === 'ACTIVE' && (
                 <Button variant="secondary" onClick={handleSuspend} disabled={processing}>
                   <Ban className="w-4 h-4 mr-2" />
-                  Suspend Driver
+                  Suspender Conductor
                 </Button>
               )}
 
               {selectedDriver.status === 'SUSPENDED' && (
                 <Button onClick={handleReactivate} disabled={processing}>
                   <RotateCcw className="w-4 h-4 mr-2" />
-                  Reactivate Driver
+                  Reactivar Conductor
                 </Button>
               )}
             </div>
