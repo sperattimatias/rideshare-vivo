@@ -14,6 +14,7 @@ import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { getOperationalDashboard } from '../../lib/adminOperations';
+import { LiveMap } from '../../components/LiveMap';
 
 interface DashboardStats {
   activeTrips: any[];
@@ -115,6 +116,18 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
             </div>
           </div>
         </div>
+
+        {/* Live Map */}
+        <Card className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Mapa en Tiempo Real</h2>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-sm text-gray-600">En vivo</span>
+            </div>
+          </div>
+          <LiveMap className="h-[500px]" />
+        </Card>
 
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
