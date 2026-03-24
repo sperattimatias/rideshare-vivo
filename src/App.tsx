@@ -2,11 +2,44 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Welcome } from './pages/Welcome';
 import { PassengerDashboard } from './pages/PassengerDashboard';
 import { DriverDashboard } from './pages/DriverDashboard';
+import { AdminDashboard } from './pages/AdminDashboard';
+import { useState, useEffect } from 'react';
+import { supabase } from './lib/supabase';
 
 function AppContent() {
-  const { loading, profile } = useAuth();
+  const { loading, profile, user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
 
-  if (loading) {
+  useEffect(() => {
+    if (user && profile) {
+      checkAdminStatus();
+    } else {
+      setCheckingAdmin(false);
+    }
+  }, [user, profile]);
+
+  const checkAdminStatus = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!error && data) {
+        setIsAdmin(true);
+      }
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+    } finally {
+      setCheckingAdmin(false);
+    }
+  };
+
+  if (loading || checkingAdmin) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -19,6 +52,10 @@ function AppContent() {
 
   if (!profile) {
     return <Welcome />;
+  }
+
+  if (isAdmin) {
+    return <AdminDashboard />;
   }
 
   if (profile.user_type === 'PASSENGER') {
