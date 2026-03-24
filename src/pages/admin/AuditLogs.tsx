@@ -3,6 +3,7 @@ import { Search, Filter, Download, Eye, FileText, ArrowLeft } from 'lucide-react
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { Select } from '../../components/Select';
 import { getRecentAuditLogs } from '../../lib/adminOperations';
 
 interface AuditLog {
@@ -114,23 +115,19 @@ export default function AuditLogs({ onBack }: AuditLogsProps) {
                   icon={<Search className="w-5 h-5" />}
                 />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tipo de Entidad
-                  </label>
-                  <select
-                    value={entityFilter}
-                    onChange={(e) => setEntityFilter(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  >
-                    <option value="all">Todos los Tipos</option>
-                    {entityTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <Select
+                  label="Tipo de Entidad"
+                  value={entityFilter}
+                  onChange={(e) => setEntityFilter(e.target.value)}
+                  fullWidth
+                >
+                  <option value="all">Todos los Tipos</option>
+                  {entityTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </Select>
 
                 <Button variant="outline" className="w-full">
                   <Download className="w-4 h-4 mr-2" />

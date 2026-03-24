@@ -12,6 +12,8 @@ import {
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
+import { Select } from '../../components/Select';
+import { Textarea } from '../../components/Textarea';
 
 interface Incident {
   id: string;
@@ -193,29 +195,29 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
                 />
 
                 <div className="flex gap-2">
-                  <select
+                  <Select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    fullWidth
                   >
                     <option value="all">Todos los Estados</option>
                     <option value="OPEN">Abierto</option>
                     <option value="INVESTIGATING">Investigando</option>
                     <option value="RESOLVED">Resuelto</option>
                     <option value="CLOSED">Cerrado</option>
-                  </select>
+                  </Select>
 
-                  <select
+                  <Select
                     value={filterSeverity}
                     onChange={(e) => setFilterSeverity(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    fullWidth
                   >
                     <option value="all">Todas las Severidades</option>
                     <option value="CRITICAL">Crítico</option>
                     <option value="HIGH">Alto</option>
                     <option value="MEDIUM">Medio</option>
                     <option value="LOW">Bajo</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
             </Card>
@@ -358,11 +360,11 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
                         form.reset();
                       }}
                     >
-                      <textarea
+                      <Textarea
                         name="comment"
                         placeholder="Agregar comentario..."
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg resize-none"
                         rows={3}
+                        fullWidth
                       />
                       <Button type="submit" className="mt-2" disabled={loading}>
                         Agregar Comentario

@@ -263,9 +263,9 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
             </p>
 
             <div className="grid md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Peso Distancia ({matchingConfig.distance_weight})
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <label className="block text-sm font-medium text-gray-900 mb-3">
+                  Peso Distancia <span className="text-blue-600 font-bold">({matchingConfig.distance_weight})</span>
                 </label>
                 <input
                   type="range"
@@ -279,16 +279,16 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
                       distance_weight: parseFloat(e.target.value),
                     })
                   }
-                  className="w-full"
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-600 mt-2">
                   Cuánto priorizar conductores cercanos
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Peso Puntaje ({matchingConfig.score_weight})
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <label className="block text-sm font-medium text-gray-900 mb-3">
+                  Peso Puntaje <span className="text-blue-600 font-bold">({matchingConfig.score_weight})</span>
                 </label>
                 <input
                   type="range"
@@ -302,16 +302,16 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
                       score_weight: parseFloat(e.target.value),
                     })
                   }
-                  className="w-full"
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-600 mt-2">
                   Cuánto priorizar conductores con alto puntaje
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Peso Valoración ({matchingConfig.rating_weight})
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <label className="block text-sm font-medium text-gray-900 mb-3">
+                  Peso Valoración <span className="text-blue-600 font-bold">({matchingConfig.rating_weight})</span>
                 </label>
                 <input
                   type="range"
@@ -325,16 +325,16 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
                       rating_weight: parseFloat(e.target.value),
                     })
                   }
-                  className="w-full"
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-600 mt-2">
                   Cuánto priorizar conductores bien valorados
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Peso Historial ({matchingConfig.history_weight})
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <label className="block text-sm font-medium text-gray-900 mb-3">
+                  Peso Historial <span className="text-blue-600 font-bold">({matchingConfig.history_weight})</span>
                 </label>
                 <input
                   type="range"
@@ -348,17 +348,17 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
                       history_weight: parseFloat(e.target.value),
                     })
                   }
-                  className="w-full"
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-600 mt-2">
                   Cuánto priorizar conductores conocidos
                 </p>
               </div>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Puntaje Mínimo
                 </label>
                 <input
@@ -372,12 +372,12 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
                       min_score_threshold: parseInt(e.target.value),
                     })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg text-lg font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Umbral Modo Confianza
                 </label>
                 <input
@@ -391,12 +391,12 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
                       trust_mode_threshold: parseInt(e.target.value),
                     })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg text-lg font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Distancia Máxima (km)
                 </label>
                 <input
@@ -411,12 +411,12 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
                       max_distance_km: parseFloat(e.target.value),
                     })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg text-lg font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t">
+            <div className="flex items-center justify-between pt-6 mt-6 border-t-2 border-gray-200">
               <div>
                 <p className="text-sm font-medium text-gray-900">
                   Peso Total:{' '}
