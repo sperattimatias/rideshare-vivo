@@ -181,6 +181,32 @@ export default function DemandRadar({ onBack }: DemandRadarProps) {
           </div>
         </Card>
 
+        {/* Live Map */}
+        <Card className="p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Mapa de Demanda en Tiempo Real</h2>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setUseRealMap(!useRealMap)}
+              >
+                <Map className="w-4 h-4 mr-2" />
+                {useRealMap ? 'Mapa Simple' : 'Mapa Real (OSM)'}
+              </Button>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-sm text-gray-600">En vivo</span>
+              </div>
+            </div>
+          </div>
+          {useRealMap ? (
+            <LeafletMap className="h-[400px]" />
+          ) : (
+            <LiveMap className="h-[400px]" />
+          )}
+        </Card>
+
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Hot Zones List */}
           <div className="lg:col-span-1">

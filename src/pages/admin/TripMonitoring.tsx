@@ -13,12 +13,15 @@ import {
   Ban,
   FileText,
   Star,
+  Map,
 } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { getTripDetails, getTripGPSHistory, cancelTripByAdmin, createIncident } from '../../lib/adminOperations';
+import { LeafletMap } from '../../components/LeafletMap';
+import { LiveMap } from '../../components/LiveMap';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type DriverRow = Database['public']['Tables']['drivers']['Row'];
@@ -42,6 +45,7 @@ export function TripMonitoring({ onBack }: TripMonitoringProps) {
   const [tripDetails, setTripDetails] = useState<any>(null);
   const [gpsHistory, setGpsHistory] = useState<any[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [useRealMap, setUseRealMap] = useState(false);
 
   useEffect(() => {
     fetchTrips();
@@ -564,6 +568,32 @@ export function TripMonitoring({ onBack }: TripMonitoringProps) {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Monitoreo de Viajes</h1>
           <p className="text-gray-600">Supervisión en tiempo real de todos los viajes</p>
         </div>
+
+        {/* Live Map */}
+        <Card className="p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Mapa en Tiempo Real</h2>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setUseRealMap(!useRealMap)}
+              >
+                <Map className="w-4 h-4 mr-2" />
+                {useRealMap ? 'Mapa Simple' : 'Mapa Real (OSM)'}
+              </Button>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-sm text-gray-600">En vivo</span>
+              </div>
+            </div>
+          </div>
+          {useRealMap ? (
+            <LeafletMap className="h-[400px]" />
+          ) : (
+            <LiveMap className="h-[400px]" />
+          )}
+        </Card>
 
         <div className="flex gap-2 mb-6">
           <Button

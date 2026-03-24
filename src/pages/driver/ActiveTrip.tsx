@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, User, Phone, Navigation, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { MapPin, User, Phone, Navigation, CheckCircle, Clock, DollarSign, Map } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { STRINGS } from '../../lib/strings';
@@ -9,6 +9,8 @@ import { calculateFare } from '../../lib/pricing';
 import { canTransitionTo, getNextDriverStatus, canDriverCancel, getDriverActionLabel } from '../../lib/tripStates';
 import { calculateDriverEarnings } from '../../lib/pricing';
 import { calculateTripCompletion, completeTripTransaction, validateTripCompletion } from '../../lib/tripCompletion';
+import { StaticMapLeaflet } from '../../components/StaticMapLeaflet';
+import { StaticMap } from '../../components/StaticMap';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type PassengerRow = Database['public']['Tables']['passengers']['Row'];
@@ -27,6 +29,7 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
   const [trip, setTrip] = useState<TripWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [useRealMap, setUseRealMap] = useState(false);
 
   useEffect(() => {
     fetchActiveTrip();
@@ -353,6 +356,89 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
               </a>
             )}
           </div>
+        </Card>
+      )}
+
+      {trip.origin_latitude && trip.origin_longitude && trip.destination_latitude && trip.destination_longitude && (
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Mapa del viaje</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setUseRealMap(!useRealMap)}
+            >
+              <Map className="w-4 h-4 mr-2" />
+              {useRealMap ? 'Mapa Simple' : 'Mapa Real (OSM)'}
+            </Button>
+          </div>
+          {useRealMap ? (
+            <StaticMapLeaflet
+              center={{
+                lat: (Number(trip.origin_latitude) + Number(trip.destination_latitude)) / 2,
+                lon: (Number(trip.origin_longitude) + Number(trip.destination_longitude)) / 2,
+              }}
+              zoom={13}
+              markers={[
+                {
+                  coordinates: {
+                    lat: Number(trip.origin_latitude),
+                    lon: Number(trip.origin_longitude)
+                  },
+                  label: 'A',
+                  color: 'green'
+                },
+                {
+                  coordinates: {
+                    lat: Number(trip.destination_latitude),
+                    lon: Number(trip.destination_longitude)
+                  },
+                  label: 'B',
+                  color: 'red'
+                },
+              ]}
+              path={[
+                { lat: Number(trip.origin_latitude), lon: Number(trip.origin_longitude) },
+                { lat: Number(trip.destination_latitude), lon: Number(trip.destination_longitude) },
+              ]}
+              className="w-full"
+              height="300px"
+            />
+          ) : (
+            <StaticMap
+              center={{
+                lat: (Number(trip.origin_latitude) + Number(trip.destination_latitude)) / 2,
+                lon: (Number(trip.origin_longitude) + Number(trip.destination_longitude)) / 2,
+              }}
+              zoom={13}
+              width={600}
+              height={300}
+              markers={[
+                {
+                  coordinates: {
+                    lat: Number(trip.origin_latitude),
+                    lon: Number(trip.origin_longitude)
+                  },
+                  label: 'A',
+                  color: 'green'
+                },
+                {
+                  coordinates: {
+                    lat: Number(trip.destination_latitude),
+                    lon: Number(trip.destination_longitude)
+                  },
+                  label: 'B',
+                  color: 'red'
+                },
+              ]}
+              path={[
+                { lat: Number(trip.origin_latitude), lon: Number(trip.origin_longitude) },
+                { lat: Number(trip.destination_latitude), lon: Number(trip.destination_longitude) },
+              ]}
+              className="w-full"
+              alt="Mapa del viaje"
+            />
+          )}
         </Card>
       )}
 

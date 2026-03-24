@@ -1,9 +1,10 @@
 import { useState, FormEvent } from 'react';
-import { Calendar, Clock, DollarSign, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, DollarSign, AlertCircle, ArrowLeft, Map } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { AddressAutocomplete } from '../../components/AddressAutocomplete';
 import { StaticMap } from '../../components/StaticMap';
+import { StaticMapLeaflet } from '../../components/StaticMapLeaflet';
 import { STRINGS } from '../../lib/strings';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -31,6 +32,7 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
   const [destinationCoords, setDestinationCoords] = useState<Coordinates | null>(null);
   const [scheduledFor, setScheduledFor] = useState('');
   const [notes, setNotes] = useState('');
+  const [useRealMap, setUseRealMap] = useState(false);
 
   const handleOriginSelected = (address: string, coordinates: Coordinates) => {
     setOriginAddress(address);
@@ -213,22 +215,53 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
 
             {estimatedFare && estimatedDistance && estimatedDuration && originCoords && destinationCoords && (
               <>
-                <StaticMap
-                  center={{
-                    lat: (originCoords.lat + destinationCoords.lat) / 2,
-                    lon: (originCoords.lon + destinationCoords.lon) / 2,
-                  }}
-                  zoom={13}
-                  width={600}
-                  height={300}
-                  markers={[
-                    { coordinates: originCoords, label: 'A', color: 'green' },
-                    { coordinates: destinationCoords, label: 'B', color: 'red' },
-                  ]}
-                  path={[originCoords, destinationCoords]}
-                  className="w-full"
-                  alt="Vista previa de la ruta"
-                />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-900">Vista previa de la ruta</h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUseRealMap(!useRealMap)}
+                      type="button"
+                    >
+                      <Map className="w-4 h-4 mr-2" />
+                      {useRealMap ? 'Mapa Simple' : 'Mapa Real (OSM)'}
+                    </Button>
+                  </div>
+                  {useRealMap ? (
+                    <StaticMapLeaflet
+                      center={{
+                        lat: (originCoords.lat + destinationCoords.lat) / 2,
+                        lon: (originCoords.lon + destinationCoords.lon) / 2,
+                      }}
+                      zoom={13}
+                      markers={[
+                        { coordinates: originCoords, label: 'A', color: 'green' },
+                        { coordinates: destinationCoords, label: 'B', color: 'red' },
+                      ]}
+                      path={[originCoords, destinationCoords]}
+                      className="w-full"
+                      height="300px"
+                    />
+                  ) : (
+                    <StaticMap
+                      center={{
+                        lat: (originCoords.lat + destinationCoords.lat) / 2,
+                        lon: (originCoords.lon + destinationCoords.lon) / 2,
+                      }}
+                      zoom={13}
+                      width={600}
+                      height={300}
+                      markers={[
+                        { coordinates: originCoords, label: 'A', color: 'green' },
+                        { coordinates: destinationCoords, label: 'B', color: 'red' },
+                      ]}
+                      path={[originCoords, destinationCoords]}
+                      className="w-full"
+                      alt="Vista previa de la ruta"
+                    />
+                  )}
+                </div>
 
                 <Card className="bg-blue-50 border-2 border-blue-200">
                   <div className="space-y-3">

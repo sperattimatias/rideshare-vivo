@@ -37,17 +37,53 @@ El sistema permite elegir entre dos tipos de mapa:
 
 ## Dónde Usar el Mapa Real
 
-### Panel Administrativo - Operaciones
-**Ruta**: `/admin/dashboard` → "Operaciones"
+Los mapas de OpenStreetMap están integrados en **todas las vistas críticas** de la plataforma:
 
-En el dashboard operacional hay un botón "Mapa Real (OSM)" que permite cambiar entre:
-- Mapa Simple
-- Mapa Real (OSM)
+### Panel Administrativo
+
+#### 1. Dashboard Operacional
+**Ruta**: `/admin/dashboard` → "Operaciones"
+- Mapa en vivo con conductores y pasajeros esperando
+- Toggle para cambiar entre mapa simple y OSM
+- Actualización automática cada 5 segundos
+
+#### 2. Monitoreo de Viajes
+**Ruta**: `/admin/dashboard` → "Monitoreo de Viajes"
+- Vista de todos los viajes activos en el mapa
+- Toggle para cambiar entre mapa simple y OSM
+
+#### 3. Radar de Demanda
+**Ruta**: `/admin/dashboard` → "Radar de Demanda"
+- Mapa de demanda en tiempo real
+- Visualización de zonas calientes
+- Toggle para cambiar entre mapa simple y OSM
+
+### Lado Pasajero
+
+#### 1. Solicitar Viaje
+**Ruta**: Panel de pasajero → "Solicitar Viaje"
+- Vista previa de la ruta con origen (A) y destino (B)
+- Toggle para ver en mapa simple o real
+- Muestra la ruta antes de confirmar el viaje
+
+#### 2. Viaje Activo
+**Ruta**: Panel de pasajero → "Viaje Activo"
+- Mapa del viaje en curso
+- Puntos de origen y destino
+- Toggle para cambiar entre mapa simple y OSM
+
+### Lado Conductor
+
+#### 1. Viaje Activo
+**Ruta**: Panel de conductor → "Viaje Activo"
+- Mapa del viaje con origen y destino
+- Visualización de la ruta a seguir
+- Toggle para cambiar entre mapa simple y OSM
 
 ## Componentes Creados
 
 ### `LeafletMap.tsx`
-Componente principal que renderiza el mapa de OpenStreetMap usando Leaflet.
+Componente de mapa en vivo que renderiza conductores y pasajeros en tiempo real.
 
 **Props**:
 - `className`: Clases CSS personalizadas
@@ -59,6 +95,25 @@ Componente principal que renderiza el mapa de OpenStreetMap usando Leaflet.
 - Gestión de marcadores con Map
 - Integración con base de datos Supabase
 - Popups informativos
+- Actualización en tiempo real de posiciones
+- Marcadores personalizados para conductores (azul/verde) y pasajeros (naranja)
+
+### `StaticMapLeaflet.tsx`
+Componente de mapa estático para mostrar rutas entre dos puntos.
+
+**Props**:
+- `center`: Centro del mapa `{ lat, lon }`
+- `zoom`: Nivel de zoom (default: 13)
+- `markers`: Array de marcadores con coordenadas, label y color
+- `path`: Array de coordenadas para dibujar la ruta
+- `className`: Clases CSS personalizadas
+- `height`: Altura del mapa (default: '300px')
+
+**Características**:
+- Muestra origen y destino con marcadores A y B
+- Dibuja línea de ruta entre puntos
+- Ajusta automáticamente el bounds para mostrar todos los puntos
+- Ideal para vista previa de viajes
 
 ## Comparación: OSM vs Otros Proveedores
 
