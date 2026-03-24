@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { MapPin, Calendar, Clock, DollarSign, AlertCircle, ArrowLeft } from 'lucide-react';
+import { MapPin, Calendar, Clock, DollarSign, AlertCircle, ArrowLeft, Navigation, CheckCircle } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { calculateDistanceKm, calculateEstimatedDurationMinutes, formatDistance, formatDuration } from '../../lib/geo';
 import { calculateFare } from '../../lib/pricing';
+import { geocodeAddress, type AddressCoordinates } from '../../lib/geocoding';
 
 interface RequestRideProps {
   onBack: () => void;
@@ -22,27 +23,58 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
   const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
 
   const [originAddress, setOriginAddress] = useState('');
-  const [originLat, setOriginLat] = useState('');
-  const [originLon, setOriginLon] = useState('');
+  const [originCoords, setOriginCoords] = useState<AddressCoordinates | null>(null);
   const [destinationAddress, setDestinationAddress] = useState('');
-  const [destinationLat, setDestinationLat] = useState('');
-  const [destinationLon, setDestinationLon] = useState('');
+  const [destinationCoords, setDestinationCoords] = useState<AddressCoordinates | null>(null);
   const [scheduledFor, setScheduledFor] = useState('');
   const [notes, setNotes] = useState('');
+  const [geocoding, setGeocoding] = useState(false);
 
-  const calculateEstimate = () => {
-    try {
-      const lat1 = parseFloat(originLat);
-      const lon1 = parseFloat(originLon);
-      const lat2 = parseFloat(destinationLat);
-      const lon2 = parseFloat(destinationLon);
+  const handleGeocodeOrigin = async () => {
+    if (!originAddress.trim()) return;
 
-      if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
-        setError('Por favor ingresá coordenadas válidas para origen y destino');
-        return;
+    setGeocoding(true);
+    setError('');
+
+    const result = await geocodeAddress(originAddress);
+
+    if (result.success && result.coordinates) {
+      setOriginCoords(result.coordinates);
+      if (destinationCoords) {
+        calculateEstimateFromCoords(result.coordinates, destinationCoords);
       }
+    } else {
+      setError(result.error || 'No se pudo geocodificar el origen');
+      setOriginCoords(null);
+    }
 
-      const distance = calculateDistanceKm(lat1, lon1, lat2, lon2);
+    setGeocoding(false);
+  };
+
+  const handleGeocodeDestination = async () => {
+    if (!destinationAddress.trim()) return;
+
+    setGeocoding(true);
+    setError('');
+
+    const result = await geocodeAddress(destinationAddress);
+
+    if (result.success && result.coordinates) {
+      setDestinationCoords(result.coordinates);
+      if (originCoords) {
+        calculateEstimateFromCoords(originCoords, result.coordinates);
+      }
+    } else {
+      setError(result.error || 'No se pudo geocodificar el destino');
+      setDestinationCoords(null);
+    }
+
+    setGeocoding(false);
+  };
+
+  const calculateEstimateFromCoords = (origin: AddressCoordinates, destination: AddressCoordinates) => {
+    try {
+      const distance = calculateDistanceKm(origin.lat, origin.lon, destination.lat, destination.lon);
       const duration = calculateEstimatedDurationMinutes(distance);
       const fare = calculateFare(distance);
 
@@ -61,6 +93,10 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
     setLoading(true);
 
     try {
+      if (!originCoords || !destinationCoords) {
+        throw new Error('Por favor geocodificá ambas direcciones antes de continuar');
+      }
+
       const { data: passenger } = await supabase
         .from('passengers')
         .select('id')
@@ -71,19 +107,14 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
         throw new Error('Perfil de pasajero no encontrado');
       }
 
-      const lat1 = parseFloat(originLat);
-      const lon1 = parseFloat(originLon);
-      const lat2 = parseFloat(destinationLat);
-      const lon2 = parseFloat(destinationLon);
-
       const tripData = {
         passenger_id: passenger.id,
-        origin_address: originAddress,
-        origin_latitude: lat1,
-        origin_longitude: lon1,
-        destination_address: destinationAddress,
-        destination_latitude: lat2,
-        destination_longitude: lon2,
+        origin_address: originCoords.address,
+        origin_latitude: originCoords.lat,
+        origin_longitude: originCoords.lon,
+        destination_address: destinationCoords.address,
+        destination_latitude: destinationCoords.lat,
+        destination_longitude: destinationCoords.lon,
         status: 'REQUESTED' as const,
         estimated_fare: estimatedFare,
         estimated_distance_km: estimatedDistance,
@@ -132,13 +163,13 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
             </div>
           )}
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <div className="flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-yellow-900">Geocodificación en desarrollo</p>
-                <p className="text-sm text-yellow-800 mt-1">
-                  Por ahora, ingresá manualmente las direcciones y coordenadas. La búsqueda automática se implementará próximamente.
+                <p className="text-sm font-medium text-blue-900">Direcciones reconocidas de Rosario</p>
+                <p className="text-sm text-blue-800 mt-1">
+                  Ingresá direcciones conocidas (ej: "Monumento a la Bandera", "Parque Independencia") o coordenadas en formato: lat, lon
                 </p>
               </div>
             </div>
@@ -150,34 +181,35 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
                 <MapPin className="w-4 h-4 text-green-600" />
                 Origen
               </label>
-              <Input
-                type="text"
-                value={originAddress}
-                onChange={(e) => setOriginAddress(e.target.value)}
-                placeholder="Ej: Av. Corrientes 1234, CABA"
-                required
-                fullWidth
-              />
-              <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="flex gap-2">
                 <Input
-                  type="number"
-                  step="any"
-                  value={originLat}
-                  onChange={(e) => setOriginLat(e.target.value)}
-                  placeholder="Latitud (ej: -34.6037)"
+                  type="text"
+                  value={originAddress}
+                  onChange={(e) => {
+                    setOriginAddress(e.target.value);
+                    setOriginCoords(null);
+                    setEstimatedFare(null);
+                  }}
+                  placeholder="Ej: Monumento a la Bandera, Rosario"
                   required
                   fullWidth
                 />
-                <Input
-                  type="number"
-                  step="any"
-                  value={originLon}
-                  onChange={(e) => setOriginLon(e.target.value)}
-                  placeholder="Longitud (ej: -58.3816)"
-                  required
-                  fullWidth
-                />
+                <Button
+                  type="button"
+                  onClick={handleGeocodeOrigin}
+                  disabled={!originAddress.trim() || geocoding}
+                  variant="outline"
+                  className="flex-shrink-0"
+                >
+                  <Navigation className="w-4 h-4" />
+                </Button>
               </div>
+              {originCoords && (
+                <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Ubicación confirmada: {originCoords.lat.toFixed(4)}, {originCoords.lon.toFixed(4)}</span>
+                </div>
+              )}
             </div>
 
             <div>
@@ -185,47 +217,37 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
                 <MapPin className="w-4 h-4 text-red-600" />
                 Destino
               </label>
-              <Input
-                type="text"
-                value={destinationAddress}
-                onChange={(e) => setDestinationAddress(e.target.value)}
-                placeholder="Ej: Av. Santa Fe 5678, CABA"
-                required
-                fullWidth
-              />
-              <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="flex gap-2">
                 <Input
-                  type="number"
-                  step="any"
-                  value={destinationLat}
-                  onChange={(e) => setDestinationLat(e.target.value)}
-                  placeholder="Latitud (ej: -34.6137)"
+                  type="text"
+                  value={destinationAddress}
+                  onChange={(e) => {
+                    setDestinationAddress(e.target.value);
+                    setDestinationCoords(null);
+                    setEstimatedFare(null);
+                  }}
+                  placeholder="Ej: Aeropuerto Rosario"
                   required
                   fullWidth
                 />
-                <Input
-                  type="number"
-                  step="any"
-                  value={destinationLon}
-                  onChange={(e) => setDestinationLon(e.target.value)}
-                  placeholder="Longitud (ej: -58.3716)"
-                  required
-                  fullWidth
-                />
+                <Button
+                  type="button"
+                  onClick={handleGeocodeDestination}
+                  disabled={!destinationAddress.trim() || geocoding}
+                  variant="outline"
+                  className="flex-shrink-0"
+                >
+                  <Navigation className="w-4 h-4" />
+                </Button>
               </div>
+              {destinationCoords && (
+                <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Ubicación confirmada: {destinationCoords.lat.toFixed(4)}, {destinationCoords.lon.toFixed(4)}</span>
+                </div>
+              )}
             </div>
 
-            {originAddress && destinationAddress && originLat && originLon && destinationLat && destinationLon && !estimatedFare && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={calculateEstimate}
-                fullWidth
-              >
-                <DollarSign className="w-4 h-4 mr-2" />
-                Calcular tarifa estimada
-              </Button>
-            )}
 
             {estimatedFare && estimatedDistance && estimatedDuration && (
               <Card className="bg-blue-50 border-2 border-blue-200">

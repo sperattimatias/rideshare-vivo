@@ -26,9 +26,11 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
+  const [driverLocation, setDriverLocation] = useState<{ lat: number; lon: number } | null>(null);
 
   useEffect(() => {
     if (isOnline) {
+      fetchDriverLocation();
       fetchTripRequests();
       const interval = setInterval(fetchTripRequests, 5000);
       return () => clearInterval(interval);
@@ -37,6 +39,33 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
       setLoading(false);
     }
   }, [driverId, isOnline]);
+
+  const fetchDriverLocation = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('current_location')
+        .eq('id', driverId)
+        .single();
+
+      if (error) throw error;
+
+      if (data?.current_location) {
+        try {
+          const location = JSON.parse(data.current_location);
+          if (location.lat && location.lon &&
+              isValidCoordinate(location.lat, location.lon)) {
+            setDriverLocation({ lat: location.lat, lon: location.lon });
+          }
+        } catch {
+          setDriverLocation(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching driver location:', error);
+      setDriverLocation(null);
+    }
+  };
 
   const fetchTripRequests = async () => {
     try {
@@ -108,8 +137,9 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
   };
 
   const getDistanceToPassenger = (trip: TripRow): string | null => {
-    const driverLat = -33.1234;
-    const driverLon = -61.4567;
+    if (!driverLocation) {
+      return null;
+    }
 
     if (!isValidCoordinate(trip.origin_latitude, trip.origin_longitude)) {
       return null;
@@ -117,8 +147,8 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
 
     try {
       const distance = calculateDistanceKm(
-        driverLat,
-        driverLon,
+        driverLocation.lat,
+        driverLocation.lon,
         trip.origin_latitude!,
         trip.origin_longitude!
       );
