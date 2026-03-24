@@ -1,13 +1,13 @@
 import { useState, FormEvent } from 'react';
-import { MapPin, Calendar, Clock, DollarSign, AlertCircle, ArrowLeft, Navigation, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, DollarSign, AlertCircle, ArrowLeft } from 'lucide-react';
 import { Button } from '../../components/Button';
-import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
+import { AddressAutocomplete } from '../../components/AddressAutocomplete';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { calculateDistanceKm, calculateEstimatedDurationMinutes, formatDistance, formatDuration } from '../../lib/geo';
 import { calculateFare } from '../../lib/pricing';
-import { geocodeAddress, type AddressCoordinates } from '../../lib/geocoding';
+import { type Coordinates } from '../../lib/geocoding';
 
 interface RequestRideProps {
   onBack: () => void;
@@ -23,56 +23,33 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
   const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
 
   const [originAddress, setOriginAddress] = useState('');
-  const [originCoords, setOriginCoords] = useState<AddressCoordinates | null>(null);
+  const [originCoords, setOriginCoords] = useState<Coordinates | null>(null);
   const [destinationAddress, setDestinationAddress] = useState('');
-  const [destinationCoords, setDestinationCoords] = useState<AddressCoordinates | null>(null);
+  const [destinationCoords, setDestinationCoords] = useState<Coordinates | null>(null);
   const [scheduledFor, setScheduledFor] = useState('');
   const [notes, setNotes] = useState('');
-  const [geocoding, setGeocoding] = useState(false);
 
-  const handleGeocodeOrigin = async () => {
-    if (!originAddress.trim()) return;
-
-    setGeocoding(true);
+  const handleOriginSelected = (address: string, coordinates: Coordinates) => {
+    setOriginAddress(address);
+    setOriginCoords(coordinates);
     setError('');
 
-    const result = await geocodeAddress(originAddress);
-
-    if (result.success && result.coordinates) {
-      setOriginCoords(result.coordinates);
-      if (destinationCoords) {
-        calculateEstimateFromCoords(result.coordinates, destinationCoords);
-      }
-    } else {
-      setError(result.error || 'No se pudo geocodificar el origen');
-      setOriginCoords(null);
+    if (destinationCoords) {
+      calculateEstimate(coordinates, destinationCoords);
     }
-
-    setGeocoding(false);
   };
 
-  const handleGeocodeDestination = async () => {
-    if (!destinationAddress.trim()) return;
-
-    setGeocoding(true);
+  const handleDestinationSelected = (address: string, coordinates: Coordinates) => {
+    setDestinationAddress(address);
+    setDestinationCoords(coordinates);
     setError('');
 
-    const result = await geocodeAddress(destinationAddress);
-
-    if (result.success && result.coordinates) {
-      setDestinationCoords(result.coordinates);
-      if (originCoords) {
-        calculateEstimateFromCoords(originCoords, result.coordinates);
-      }
-    } else {
-      setError(result.error || 'No se pudo geocodificar el destino');
-      setDestinationCoords(null);
+    if (originCoords) {
+      calculateEstimate(originCoords, coordinates);
     }
-
-    setGeocoding(false);
   };
 
-  const calculateEstimateFromCoords = (origin: AddressCoordinates, destination: AddressCoordinates) => {
+  const calculateEstimate = (origin: Coordinates, destination: Coordinates) => {
     try {
       const distance = calculateDistanceKm(origin.lat, origin.lon, destination.lat, destination.lon);
       const duration = calculateEstimatedDurationMinutes(distance);
@@ -84,6 +61,9 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
       setError('');
     } catch (err) {
       setError((err as Error).message);
+      setEstimatedFare(null);
+      setEstimatedDistance(null);
+      setEstimatedDuration(null);
     }
   };
 
@@ -94,7 +74,11 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
 
     try {
       if (!originCoords || !destinationCoords) {
-        throw new Error('Por favor geocodificá ambas direcciones antes de continuar');
+        throw new Error('Por favor seleccioná direcciones válidas de origen y destino');
+      }
+
+      if (!estimatedFare || !estimatedDistance || !estimatedDuration) {
+        throw new Error('No se pudo calcular la tarifa estimada');
       }
 
       const { data: passenger } = await supabase
@@ -109,10 +93,10 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
 
       const tripData = {
         passenger_id: passenger.id,
-        origin_address: originCoords.address,
+        origin_address: originAddress,
         origin_latitude: originCoords.lat,
         origin_longitude: originCoords.lon,
-        destination_address: destinationCoords.address,
+        destination_address: destinationAddress,
         destination_latitude: destinationCoords.lat,
         destination_longitude: destinationCoords.lon,
         status: 'REQUESTED' as const,
@@ -120,6 +104,7 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
         estimated_distance_km: estimatedDistance,
         estimated_duration_minutes: estimatedDuration,
         scheduled_for: scheduledFor || undefined,
+        notes: notes.trim() || undefined
       };
 
       const { error: insertError } = await supabase
@@ -158,8 +143,9 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
 
         <Card>
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
+            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <p>{error}</p>
             </div>
           )}
 
@@ -167,87 +153,35 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
             <div className="flex items-start gap-2">
               <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-blue-900">Direcciones reconocidas de Rosario</p>
+                <p className="text-sm font-medium text-blue-900">Geocodificación en tiempo real</p>
                 <p className="text-sm text-blue-800 mt-1">
-                  Ingresá direcciones conocidas (ej: "Monumento a la Bandera", "Parque Independencia") o coordenadas en formato: lat, lon
+                  Escribí cualquier dirección de Rosario (calle, número, barrio, lugares conocidos).
+                  El sistema buscará automáticamente las direcciones disponibles.
                 </p>
               </div>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <MapPin className="w-4 h-4 text-green-600" />
-                Origen
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  value={originAddress}
-                  onChange={(e) => {
-                    setOriginAddress(e.target.value);
-                    setOriginCoords(null);
-                    setEstimatedFare(null);
-                  }}
-                  placeholder="Ej: Monumento a la Bandera, Rosario"
-                  required
-                  fullWidth
-                />
-                <Button
-                  type="button"
-                  onClick={handleGeocodeOrigin}
-                  disabled={!originAddress.trim() || geocoding}
-                  variant="outline"
-                  className="flex-shrink-0"
-                >
-                  <Navigation className="w-4 h-4" />
-                </Button>
-              </div>
-              {originCoords && (
-                <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Ubicación confirmada: {originCoords.lat.toFixed(4)}, {originCoords.lon.toFixed(4)}</span>
-                </div>
-              )}
-            </div>
+            <AddressAutocomplete
+              value={originAddress}
+              onChange={setOriginAddress}
+              onSelectAddress={handleOriginSelected}
+              placeholder="Ej: Córdoba 1234, Rosario"
+              label="Origen"
+              required
+              confirmed={!!originCoords}
+            />
 
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <MapPin className="w-4 h-4 text-red-600" />
-                Destino
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  value={destinationAddress}
-                  onChange={(e) => {
-                    setDestinationAddress(e.target.value);
-                    setDestinationCoords(null);
-                    setEstimatedFare(null);
-                  }}
-                  placeholder="Ej: Aeropuerto Rosario"
-                  required
-                  fullWidth
-                />
-                <Button
-                  type="button"
-                  onClick={handleGeocodeDestination}
-                  disabled={!destinationAddress.trim() || geocoding}
-                  variant="outline"
-                  className="flex-shrink-0"
-                >
-                  <Navigation className="w-4 h-4" />
-                </Button>
-              </div>
-              {destinationCoords && (
-                <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Ubicación confirmada: {destinationCoords.lat.toFixed(4)}, {destinationCoords.lon.toFixed(4)}</span>
-                </div>
-              )}
-            </div>
-
+            <AddressAutocomplete
+              value={destinationAddress}
+              onChange={setDestinationAddress}
+              onSelectAddress={handleDestinationSelected}
+              placeholder="Ej: Monumento a la Bandera"
+              label="Destino"
+              required
+              confirmed={!!destinationCoords}
+            />
 
             {estimatedFare && estimatedDistance && estimatedDuration && (
               <Card className="bg-blue-50 border-2 border-blue-200">
@@ -282,14 +216,14 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
                     <Calendar className="w-4 h-4 text-gray-600" />
                     Programar viaje (opcional)
                   </label>
-                  <Input
+                  <input
                     type="datetime-local"
                     value={scheduledFor}
                     onChange={(e) => setScheduledFor(e.target.value)}
                     min={new Date().toISOString().slice(0, 16)}
-                    fullWidth
-                    helperText="Dejá vacío para solicitar un viaje inmediato"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Dejá vacío para solicitar un viaje inmediato</p>
                 </div>
 
                 <div>
@@ -335,7 +269,7 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
               <Button
                 type="submit"
                 variant="primary"
-                disabled={loading || !estimatedFare}
+                disabled={loading || !estimatedFare || !originCoords || !destinationCoords}
                 fullWidth
               >
                 {loading ? 'Solicitando...' : scheduledFor ? 'Programar viaje' : 'Solicitar viaje'}
@@ -347,13 +281,13 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h4 className="font-semibold text-blue-900 mb-2">Cómo funciona</h4>
           <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-            <li>Solicitás el viaje con origen y destino</li>
-            <li>El sistema busca conductores disponibles cercanos</li>
-            <li>Un conductor acepta tu solicitud</li>
-            <li>El conductor llega a tu ubicación</li>
-            <li>Realizás el viaje</li>
-            <li>El pago se procesa automáticamente</li>
-            <li>Calificás al conductor</li>
+            <li>Ingresá direcciones de origen y destino en Rosario</li>
+            <li>El sistema calcula automáticamente distancia y tarifa</li>
+            <li>Solicitás el viaje y se notifica a conductores cercanos</li>
+            <li>Un conductor acepta y llega a tu ubicación</li>
+            <li>Realizás el viaje de manera segura</li>
+            <li>El pago se procesa automáticamente vía Mercado Pago</li>
+            <li>Calificás tu experiencia</li>
           </ol>
         </div>
       </div>
