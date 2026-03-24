@@ -13,6 +13,7 @@ type DriverRow = Database['public']['Tables']['drivers']['Row'];
 interface UserWithDetails extends UserProfileRow {
   passenger?: PassengerRow;
   driver?: DriverRow;
+  email?: string;
 }
 
 interface UserManagementProps {
@@ -33,6 +34,10 @@ export function UserManagement({ onBack }: UserManagementProps) {
   const fetchUsers = async () => {
     setLoading(true);
     try {
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+
+      if (authError) throw authError;
+
       const { data: profiles, error: profilesError } = await supabase
         .from('user_profiles')
         .select('*')
@@ -40,16 +45,24 @@ export function UserManagement({ onBack }: UserManagementProps) {
 
       if (profilesError) throw profilesError;
 
+      const emailMap = new Map();
+      authUsers.users.forEach(u => {
+        emailMap.set(u.id, u.email);
+      });
+
       const usersWithDetails: UserWithDetails[] = [];
 
       for (const profile of profiles || []) {
-        const userDetail: UserWithDetails = { ...profile };
+        const userDetail: UserWithDetails = {
+          ...profile,
+          email: emailMap.get(profile.id) || ''
+        };
 
         if (profile.user_type === 'PASSENGER' || filter === 'all') {
           const { data: passenger } = await supabase
             .from('passengers')
             .select('*')
-            .eq('user_id', profile.user_id)
+            .eq('user_id', profile.id)
             .maybeSingle();
 
           if (passenger) {
@@ -61,7 +74,7 @@ export function UserManagement({ onBack }: UserManagementProps) {
           const { data: driver } = await supabase
             .from('drivers')
             .select('*')
-            .eq('user_id', profile.user_id)
+            .eq('user_id', profile.id)
             .maybeSingle();
 
           if (driver) {
@@ -70,8 +83,8 @@ export function UserManagement({ onBack }: UserManagementProps) {
         }
 
         if (filter === 'all' ||
-            (filter === 'passengers' && userDetail.passenger) ||
-            (filter === 'drivers' && userDetail.driver)) {
+            (filter === 'passengers' && (userDetail.passenger || profile.user_type === 'PASSENGER')) ||
+            (filter === 'drivers' && (userDetail.driver || profile.user_type === 'DRIVER'))) {
           usersWithDetails.push(userDetail);
         }
       }
@@ -88,7 +101,7 @@ export function UserManagement({ onBack }: UserManagementProps) {
     const searchLower = searchTerm.toLowerCase();
     return (
       user.full_name.toLowerCase().includes(searchLower) ||
-      user.email.toLowerCase().includes(searchLower) ||
+      user.email?.toLowerCase().includes(searchLower) ||
       user.phone?.toLowerCase().includes(searchLower)
     );
   });
@@ -106,10 +119,22 @@ export function UserManagement({ onBack }: UserManagementProps) {
           Conductor
         </span>
       );
+    } else if (user.user_type === 'DRIVER') {
+      return (
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+          Conductor (Perfil Incompleto)
+        </span>
+      );
     } else if (user.passenger) {
       return (
         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
           Pasajero
+        </span>
+      );
+    } else if (user.user_type === 'PASSENGER') {
+      return (
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          Pasajero (Registro Básico)
         </span>
       );
     } else {
