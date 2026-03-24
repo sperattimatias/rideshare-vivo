@@ -10,11 +10,15 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Ban,
+  FileText,
+  Star,
 } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
+import { getTripDetails, getTripGPSHistory, cancelTripByAdmin, createIncident } from '../../lib/adminOperations';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type DriverRow = Database['public']['Tables']['drivers']['Row'];
@@ -35,6 +39,9 @@ export function TripMonitoring({ onBack }: TripMonitoringProps) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'active' | 'completed' | 'cancelled' | 'all'>('active');
   const [selectedTrip, setSelectedTrip] = useState<TripWithDetails | null>(null);
+  const [tripDetails, setTripDetails] = useState<any>(null);
+  const [gpsHistory, setGpsHistory] = useState<any[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   useEffect(() => {
     fetchTrips();
@@ -158,6 +165,71 @@ export function TripMonitoring({ onBack }: TripMonitoringProps) {
       </span>
     );
   };
+
+  async function loadTripDetails(tripId: string) {
+    setLoadingDetails(true);
+    try {
+      const [details, gps] = await Promise.all([
+        getTripDetails(tripId),
+        getTripGPSHistory(tripId)
+      ]);
+      setTripDetails(details);
+      setGpsHistory(gps);
+    } catch (error) {
+      console.error('Error loading trip details:', error);
+    } finally {
+      setLoadingDetails(false);
+    }
+  }
+
+  async function handleCancelTrip() {
+    if (!selectedTrip) return;
+
+    const reason = prompt('Enter cancellation reason:');
+    if (!reason) return;
+
+    try {
+      await cancelTripByAdmin(selectedTrip.id, reason);
+      alert('Trip cancelled successfully');
+      setSelectedTrip(null);
+      await fetchTrips();
+    } catch (error) {
+      console.error('Error cancelling trip:', error);
+      alert('Failed to cancel trip');
+    }
+  }
+
+  async function handleCreateIncident() {
+    if (!selectedTrip) return;
+
+    const title = prompt('Incident title:');
+    if (!title) return;
+
+    const description = prompt('Incident description:');
+    if (!description) return;
+
+    try {
+      await createIncident({
+        incident_type: 'OTHER',
+        severity: 'MEDIUM',
+        title,
+        description,
+        trip_id: selectedTrip.id,
+        driver_id: selectedTrip.driver_id || undefined,
+        passenger_id: selectedTrip.passenger_id,
+      });
+      alert('Incident created successfully');
+    } catch (error) {
+      console.error('Error creating incident:', error);
+      alert('Failed to create incident');
+    }
+  }
+
+  useEffect(() => {
+    if (selectedTrip) {
+      loadTripDetails(selectedTrip.id);
+    }
+  }, [selectedTrip]);
 
   if (selectedTrip) {
     const driver = selectedTrip.driver;
@@ -351,6 +423,122 @@ export function TripMonitoring({ onBack }: TripMonitoringProps) {
                 </div>
               )}
             </div>
+          </Card>
+
+          {/* Payment Details */}
+          {tripDetails?.payment && (
+            <Card className="mb-6">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-green-600" />
+                Payment Details
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Total Amount</p>
+                  <p className="font-medium text-gray-900">${tripDetails.payment.total_amount}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Driver Amount</p>
+                  <p className="font-medium text-gray-900">${tripDetails.payment.driver_amount}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Platform Amount</p>
+                  <p className="font-medium text-gray-900">${tripDetails.payment.platform_amount}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Payment Status</p>
+                  <p className="font-medium text-gray-900">{tripDetails.payment.mp_status}</p>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Rating */}
+          {tripDetails?.rating && (
+            <Card className="mb-6">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500" />
+                Rating
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Overall Rating</p>
+                  <p className="font-medium text-gray-900">{tripDetails.rating.overall_rating}/5</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Safety</p>
+                  <p className="font-medium text-gray-900">{tripDetails.rating.safety_rating || 'N/A'}/5</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Cleanliness</p>
+                  <p className="font-medium text-gray-900">{tripDetails.rating.cleanliness_rating || 'N/A'}/5</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Communication</p>
+                  <p className="font-medium text-gray-900">{tripDetails.rating.communication_rating || 'N/A'}/5</p>
+                </div>
+              </div>
+              {tripDetails.rating.comment && (
+                <div className="mt-4 pt-4 border-t">
+                  <p className="text-sm text-gray-600 mb-1">Comment</p>
+                  <p className="text-gray-900">{tripDetails.rating.comment}</p>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* GPS History */}
+          {gpsHistory.length > 0 && (
+            <Card className="mb-6">
+              <h3 className="font-semibold text-gray-900 mb-4">GPS Tracking History</h3>
+              <div className="max-h-64 overflow-y-auto space-y-2">
+                {gpsHistory.map((location, index) => (
+                  <div key={location.id} className="flex items-center gap-3 text-sm">
+                    <MapPin className="w-4 h-4 text-blue-600" />
+                    <div className="flex-1">
+                      <span className="text-gray-600">Point {index + 1}</span>
+                      {location.speed_kmh && (
+                        <span className="ml-2 text-gray-500">- {location.speed_kmh} km/h</span>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {new Date(location.recorded_at).toLocaleTimeString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Admin Actions */}
+          <Card>
+            <h3 className="font-semibold text-gray-900 mb-4">Admin Actions</h3>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="secondary"
+                onClick={handleCreateIncident}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Create Incident
+              </Button>
+
+              {!['COMPLETED', 'CANCELLED_BY_PASSENGER', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_SYSTEM'].includes(selectedTrip.status) && (
+                <Button
+                  variant="secondary"
+                  onClick={handleCancelTrip}
+                >
+                  <Ban className="w-4 h-4 mr-2" />
+                  Cancel Trip
+                </Button>
+              )}
+            </div>
+
+            {selectedTrip.admin_notes && (
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-sm font-medium text-gray-900 mb-1">Admin Notes</p>
+                <p className="text-sm text-gray-600">{selectedTrip.admin_notes}</p>
+              </div>
+            )}
           </Card>
         </div>
       </div>

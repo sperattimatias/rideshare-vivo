@@ -1,22 +1,29 @@
 import { useState } from 'react';
-import { LogOut, Users, Car, TrendingUp, DollarSign, AlertCircle, FileText, Settings } from 'lucide-react';
+import { LogOut, Users, Car, TrendingUp, DollarSign, AlertCircle, FileText, Settings, Activity, Shield } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { DriverVerification } from './admin/DriverVerification';
+import DriverVerificationEnhanced from './admin/DriverVerificationEnhanced';
 import { PlatformAnalytics } from './admin/PlatformAnalytics';
 import { TripMonitoring } from './admin/TripMonitoring';
 import { UserManagement } from './admin/UserManagement';
 import { SystemConfiguration } from './admin/SystemConfiguration';
+import OperationalDashboard from './admin/OperationalDashboard';
+import IncidentManagement from './admin/IncidentManagement';
+import AuditLogs from './admin/AuditLogs';
 
 type AdminView =
   | 'overview'
+  | 'operations'
+  | 'incidents'
   | 'driver-verification'
   | 'analytics'
   | 'trip-monitoring'
   | 'user-management'
-  | 'configuration';
+  | 'configuration'
+  | 'audit-logs';
 
 export function AdminDashboard() {
   const { profile } = useAuth();
@@ -27,8 +34,20 @@ export function AdminDashboard() {
     window.location.reload();
   };
 
+  if (view === 'operations') {
+    return <OperationalDashboard />;
+  }
+
+  if (view === 'incidents') {
+    return <IncidentManagement />;
+  }
+
+  if (view === 'audit-logs') {
+    return <AuditLogs />;
+  }
+
   if (view === 'driver-verification') {
-    return <DriverVerification onBack={() => setView('overview')} />;
+    return <DriverVerificationEnhanced />;
   }
 
   if (view === 'analytics') {
@@ -83,6 +102,47 @@ export function AdminDashboard() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card
+            className="hover:shadow-lg transition-all cursor-pointer group border-2 border-blue-200 bg-blue-50"
+            onClick={() => setView('operations')}
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center group-hover:bg-blue-700 transition-colors">
+                <Activity className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">Operations Center</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Real-time platform monitoring
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-xs text-gray-600">Live</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card
+            className="hover:shadow-lg transition-all cursor-pointer group"
+            onClick={() => setView('incidents')}
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center group-hover:bg-orange-600 transition-colors">
+                <AlertCircle className="w-6 h-6 text-orange-600 group-hover:text-white transition-colors" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">Incident Management</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Handle platform incidents and complaints
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">Professional handling</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card
             className="hover:shadow-lg transition-all cursor-pointer group"
             onClick={() => setView('driver-verification')}
           >
@@ -91,15 +151,12 @@ export function AdminDashboard() {
                 <Car className="w-6 h-6 text-blue-600 group-hover:text-white transition-colors" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 mb-1">Verificación de Conductores</h3>
+                <h3 className="font-semibold text-gray-900 mb-1">Driver Verification</h3>
                 <p className="text-sm text-gray-600 mb-3">
-                  Revisar y aprobar solicitudes de conductores
+                  Review and approve driver applications
                 </p>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                    <AlertCircle className="w-3 h-3" />
-                    Pendientes
-                  </span>
+                  <span className="text-xs text-gray-600">Enhanced workflow</span>
                 </div>
               </div>
             </div>
@@ -185,16 +242,36 @@ export function AdminDashboard() {
             </div>
           </Card>
 
+          <Card
+            className="hover:shadow-lg transition-all cursor-pointer group"
+            onClick={() => setView('audit-logs')}
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-600 transition-colors">
+                <Shield className="w-6 h-6 text-purple-600 group-hover:text-white transition-colors" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">Audit Logs</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Complete audit trail of admin actions
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">Full transparency</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-green-900 mb-1">Ingresos de Plataforma</h3>
-                <p className="text-sm text-green-700 mb-2">Comisiones del mes actual</p>
+                <h3 className="font-semibold text-green-900 mb-1">Platform Revenue</h3>
+                <p className="text-sm text-green-700 mb-2">Current month commissions</p>
                 <p className="text-2xl font-bold text-green-900">$0.00</p>
-                <p className="text-xs text-green-700 mt-1">Actualizado en tiempo real</p>
+                <p className="text-xs text-green-700 mt-1">Real-time updates</p>
               </div>
             </div>
           </Card>
