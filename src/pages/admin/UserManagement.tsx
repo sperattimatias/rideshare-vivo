@@ -14,6 +14,7 @@ interface UserWithDetails extends UserProfileRow {
   passenger?: PassengerRow;
   driver?: DriverRow;
   email?: string;
+  is_admin?: boolean;
 }
 
 interface UserManagementProps {
@@ -46,9 +47,16 @@ export function UserManagement({ onBack }: UserManagementProps) {
       for (const profile of profiles || []) {
         const { data: authUser } = await supabase.auth.admin.getUserById(profile.id);
 
+        const { data: adminUser } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('user_id', profile.id)
+          .maybeSingle();
+
         const userDetail: UserWithDetails = {
           ...profile,
-          email: authUser?.user?.email || ''
+          email: authUser?.user?.email || '',
+          is_admin: !!adminUser
         };
 
         const { data: passenger } = await supabase
@@ -73,9 +81,9 @@ export function UserManagement({ onBack }: UserManagementProps) {
 
         if (filter === 'all') {
           usersWithDetails.push(userDetail);
-        } else if (filter === 'passengers' && userDetail.passenger) {
+        } else if (filter === 'passengers' && userDetail.passenger && !userDetail.is_admin) {
           usersWithDetails.push(userDetail);
-        } else if (filter === 'drivers' && userDetail.driver) {
+        } else if (filter === 'drivers' && userDetail.driver && !userDetail.is_admin) {
           usersWithDetails.push(userDetail);
         }
       }
@@ -98,7 +106,14 @@ export function UserManagement({ onBack }: UserManagementProps) {
   });
 
   const getUserTypeBadge = (user: UserWithDetails) => {
-    if (user.passenger && user.driver) {
+    if (user.is_admin) {
+      return (
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <Shield className="w-3 h-3" />
+          Administrador
+        </span>
+      );
+    } else if (user.passenger && user.driver) {
       return (
         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
           Pasajero + Conductor
