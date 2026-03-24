@@ -6,6 +6,8 @@ import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { calculateFare } from '../../lib/pricing';
 import { canTransitionTo, getNextDriverStatus, canDriverCancel, getDriverActionLabel } from '../../lib/tripStates';
+import { calculateDriverEarnings } from '../../lib/pricing';
+import { calculateTripCompletion, completeTripTransaction, validateTripCompletion } from '../../lib/tripCompletion';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type PassengerRow = Database['public']['Tables']['passengers']['Row'];
@@ -88,34 +90,7 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
 
       if (error) throw error;
 
-      if (newStatus === 'COMPLETED') {
-        await supabase
-          .from('drivers')
-          .update({
-            is_on_trip: false,
-            total_trips: (trip as any).driver?.total_trips + 1 || 1,
-          })
-          .eq('id', driverId);
-
-        const { data: passenger } = await supabase
-          .from('passengers')
-          .select('total_trips')
-          .eq('id', trip.passenger_id)
-          .maybeSingle();
-
-        if (passenger) {
-          await supabase
-            .from('passengers')
-            .update({
-              total_trips: passenger.total_trips + 1,
-            })
-            .eq('id', trip.passenger_id);
-        }
-
-        onComplete();
-      } else {
-        fetchActiveTrip();
-      }
+      fetchActiveTrip();
     } catch (error) {
       console.error('Error updating trip status:', error);
       alert('Error al actualizar el estado del viaje');
@@ -163,7 +138,13 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
   };
 
   const handleCompleteTrip = async () => {
-    if (!trip) return;
+    if (!trip || updating) return;
+
+    const validation = validateTripCompletion(trip);
+    if (!validation.valid) {
+      alert(validation.error);
+      return;
+    }
 
     const actualDistance = prompt('Ingresá la distancia real recorrida (km):',
       trip.estimated_distance_km?.toString() || '');
@@ -176,17 +157,43 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
       return;
     }
 
-    const finalFare = calculateFare(distance);
+    setUpdating(true);
+    try {
+      const completionData = await calculateTripCompletion(trip, distance);
 
-    const duration = Math.floor(
-      (Date.now() - new Date(trip.started_at || trip.accepted_at).getTime()) / 60000
-    );
+      const confirm = window.confirm(
+        `Finalizar viaje:\n\n` +
+        `Distancia: ${completionData.actualDistanceKm} km\n` +
+        `Duración: ${completionData.actualDurationMinutes} min\n` +
+        `Tarifa total: $${completionData.finalFare}\n` +
+        `Tu ganancia: $${completionData.driverEarnings}\n\n` +
+        `¿Confirmar?`
+      );
 
-    await updateTripStatus('COMPLETED', {
-      actual_distance_km: distance,
-      actual_duration_minutes: duration,
-      final_fare: finalFare,
-    });
+      if (!confirm) {
+        setUpdating(false);
+        return;
+      }
+
+      const result = await completeTripTransaction(
+        trip.id,
+        driverId,
+        trip.passenger_id,
+        completionData
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Error al finalizar el viaje');
+      }
+
+      alert(`¡Viaje finalizado!\n\nGanaste $${completionData.driverEarnings}`);
+      onComplete();
+    } catch (error) {
+      console.error('Error completing trip:', error);
+      alert('Error al finalizar el viaje. Por favor intentá nuevamente.');
+    } finally {
+      setUpdating(false);
+    }
   };
 
   if (loading) {
