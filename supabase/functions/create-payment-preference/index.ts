@@ -33,33 +33,6 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data: settings, error: settingsError } = await supabase
-      .from('system_settings')
-      .select('key, value')
-      .eq('category', 'payment')
-      .in('key', ['mp_access_token', 'mp_platform_seller_id']);
-
-    if (settingsError) {
-      console.error('Error fetching settings:', settingsError);
-      throw new Error('Error al obtener configuración de pagos');
-    }
-
-    const settingsMap: Record<string, string> = {};
-    settings?.forEach((s: { key: string; value: string }) => {
-      settingsMap[s.key] = s.value;
-    });
-
-    const mpAccessToken = settingsMap.mp_access_token;
-    const platformSellerId = settingsMap.mp_platform_seller_id;
-
-    if (!mpAccessToken) {
-      throw new Error('MP_ACCESS_TOKEN no configurado. Configure Mercado Pago en el panel de administración.');
-    }
-
-    if (!platformSellerId) {
-      throw new Error('MP_PLATFORM_SELLER_ID no configurado. Configure Mercado Pago en el panel de administración.');
-    }
-
     const body: RequestBody = await req.json();
     const { tripId, amount, driverAmount, platformAmount, driverSellerId, description } = body;
 
@@ -72,6 +45,41 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    const { data: driverToken, error: tokenError } = await supabase
+      .from('driver_oauth_tokens')
+      .select('access_token, expires_at')
+      .eq('driver_id', driverSellerId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (tokenError || !driverToken) {
+      throw new Error('El conductor no tiene una cuenta de Mercado Pago vinculada. Debe conectar su cuenta primero.');
+    }
+
+    const expiresAt = new Date(driverToken.expires_at);
+    if (expiresAt < new Date()) {
+      throw new Error('El token de Mercado Pago del conductor ha expirado. Debe volver a conectar su cuenta.');
+    }
+
+    const { data: settings, error: settingsError } = await supabase
+      .from('system_settings')
+      .select('key, value')
+      .eq('category', 'payment')
+      .eq('key', 'mp_platform_seller_id')
+      .maybeSingle();
+
+    if (settingsError || !settings) {
+      throw new Error('Error al obtener configuración de la plataforma');
+    }
+
+    const platformSellerId = settings.value;
+
+    if (!platformSellerId) {
+      throw new Error('MP_PLATFORM_SELLER_ID no configurado. Configure Mercado Pago en el panel de administración.');
+    }
+
+    const driverAccessToken = driverToken.access_token;
 
     const preference = {
       items: [
@@ -100,7 +108,7 @@ Deno.serve(async (req: Request) => {
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${mpAccessToken}`,
+        'Authorization': `Bearer ${driverAccessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(preference),

@@ -142,7 +142,8 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
 
     try {
       const updates = [
-        { key: 'mp_access_token', value: mpSettings.mp_access_token || '' },
+        { key: 'mp_app_id', value: mpSettings.mp_app_id || '' },
+        { key: 'mp_client_secret', value: mpSettings.mp_client_secret || '' },
         { key: 'mp_platform_seller_id', value: mpSettings.mp_platform_seller_id || '' },
         { key: 'mp_environment', value: mpSettings.mp_environment || 'test' },
       ];
@@ -206,13 +207,13 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
           <div className="space-y-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <h4 className="font-semibold text-blue-900 mb-2 text-sm">
-                Configuración de Pagos
+                Configuración de Pagos con OAuth
               </h4>
               <p className="text-sm text-blue-800 mb-2">
-                Configurá tus credenciales de Mercado Pago para habilitar los pagos en la plataforma.
+                Configurá tu aplicación de Mercado Pago para que los conductores puedan conectar sus cuentas mediante OAuth.
               </p>
               <p className="text-xs text-blue-700">
-                Obtené tus credenciales en:{' '}
+                Creá tu aplicación en:{' '}
                 <a
                   href="https://www.mercadopago.com.ar/developers/panel/app"
                   target="_blank"
@@ -226,14 +227,29 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Access Token <span className="text-red-500">*</span>
+                Application ID (App ID) <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="text"
+                value={mpSettings.mp_app_id || ''}
+                onChange={(e) => setMpSettings({ ...mpSettings, mp_app_id: e.target.value })}
+                placeholder="1234567890123456"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                ID de tu aplicación de Mercado Pago (se encuentra en el panel de desarrolladores)
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Client Secret <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <Input
                   type={showMpToken ? 'text' : 'password'}
-                  value={mpSettings.mp_access_token || ''}
-                  onChange={(e) => setMpSettings({ ...mpSettings, mp_access_token: e.target.value })}
-                  placeholder="TEST-1234567890-XXXXXX-XXXXXXXXXXXXXXXX"
+                  value={mpSettings.mp_client_secret || ''}
+                  onChange={(e) => setMpSettings({ ...mpSettings, mp_client_secret: e.target.value })}
+                  placeholder="abcdefghijklmnopqrstuvwxyz123456"
                   className="pr-10"
                 />
                 <button
@@ -249,7 +265,7 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Token de acceso de Mercado Pago (TEST para sandbox, PROD para producción)
+                Client Secret de tu aplicación (mantenerlo en secreto)
               </p>
             </div>
 
@@ -292,10 +308,11 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
                   <div>
                     <p className="text-sm font-medium text-yellow-900 mb-1">Importante</p>
                     <ul className="text-xs text-yellow-800 space-y-1 list-disc list-inside">
-                      <li>Guardá el Access Token de forma segura</li>
-                      <li>En producción, usá credenciales PROD</li>
+                      <li>Guardá el Client Secret de forma segura</li>
+                      <li>En producción, usá credenciales de aplicación PROD</li>
+                      <li>Los conductores conectarán sus propias cuentas mediante OAuth</li>
                       <li>El split de pagos se configura automáticamente (80% conductor, 20% plataforma)</li>
-                      <li>Los cambios se aplican inmediatamente a todos los pagos nuevos</li>
+                      <li>Los cambios se aplican inmediatamente a todas las nuevas conexiones</li>
                     </ul>
                   </div>
                 </div>
@@ -304,7 +321,7 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
               <Button
                 variant="primary"
                 onClick={handleSaveMercadoPago}
-                disabled={savingMp || !mpSettings.mp_access_token || !mpSettings.mp_platform_seller_id}
+                disabled={savingMp || !mpSettings.mp_app_id || !mpSettings.mp_client_secret || !mpSettings.mp_platform_seller_id}
                 fullWidth
               >
                 <Save className="w-4 h-4 mr-2" />

@@ -6,6 +6,7 @@ import { Card } from '../../components/Card';
 import { FileUpload } from '../../components/FileUpload';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { MercadoPagoConnect } from './MercadoPagoConnect';
 
 interface CompleteProfileProps {
   onBack: () => void;
@@ -426,52 +427,7 @@ export function CompleteProfile({ onBack, onComplete }: CompleteProfileProps) {
           )}
 
           {currentStep === 4 && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-semibold mb-4">Vincular Mercado Pago</h2>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-                <div className="flex items-start gap-3">
-                  <CreditCard className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
-                  <div>
-                    <h3 className="font-semibold text-blue-900 mb-2">¿Por qué necesitás vincular Mercado Pago?</h3>
-                    <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                      <li>Recibí tus ganancias automáticamente después de cada viaje</li>
-                      <li>Sin complicaciones de liquidaciones manuales</li>
-                      <li>Plataforma descuenta su comisión automáticamente (20%)</li>
-                      <li>Seguro y transparente</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-yellow-800">
-                  <strong>Nota:</strong> La vinculación con Mercado Pago se implementará en la próxima fase. Por ahora, podés completar tu perfil y esperar la aprobación de tus documentos.
-                </p>
-              </div>
-
-              <Card className="bg-gray-50">
-                <div className="text-center py-8">
-                  <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Perfil Completado</h3>
-                  <p className="text-gray-600 mb-6">
-                    Tu perfil está completo. Ahora el equipo de VIVO revisará tus documentos.
-                  </p>
-                  <div className="bg-white rounded-lg p-4 text-left max-w-md mx-auto mb-6">
-                    <h4 className="font-semibold text-gray-900 mb-2">Próximos pasos:</h4>
-                    <ol className="text-sm text-gray-600 space-y-2 list-decimal list-inside">
-                      <li>Revisión de documentos (24-48 horas)</li>
-                      <li>Vinculación de Mercado Pago (próximamente)</li>
-                      <li>Aprobación final</li>
-                      <li>¡Empezá a recibir viajes!</li>
-                    </ol>
-                  </div>
-                  <Button variant="primary" onClick={onComplete}>
-                    Volver al Dashboard
-                  </Button>
-                </div>
-              </Card>
-            </div>
+            <MercadoPagoConnect onComplete={onComplete} />
           )}
         </Card>
       </div>
