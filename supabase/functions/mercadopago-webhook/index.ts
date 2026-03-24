@@ -30,17 +30,30 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN');
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Configuración de Supabase no disponible');
     }
 
-    if (!mpAccessToken) {
-      throw new Error('MP_ACCESS_TOKEN no configurado');
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: settings, error: settingsError } = await supabase
+      .from('system_settings')
+      .select('key, value')
+      .eq('category', 'payment')
+      .eq('key', 'mp_access_token')
+      .maybeSingle();
+
+    if (settingsError) {
+      console.error('Error fetching settings:', settingsError);
+      throw new Error('Error al obtener configuración de pagos');
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const mpAccessToken = settings?.value;
+
+    if (!mpAccessToken) {
+      throw new Error('MP_ACCESS_TOKEN no configurado en el sistema');
+    }
 
     const notification: MercadoPagoNotification = await req.json();
 

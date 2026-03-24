@@ -26,22 +26,39 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN');
-    const platformSellerId = Deno.env.get('MP_PLATFORM_SELLER_ID');
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Configuración de Supabase no disponible');
     }
 
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: settings, error: settingsError } = await supabase
+      .from('system_settings')
+      .select('key, value')
+      .eq('category', 'payment')
+      .in('key', ['mp_access_token', 'mp_platform_seller_id']);
+
+    if (settingsError) {
+      console.error('Error fetching settings:', settingsError);
+      throw new Error('Error al obtener configuración de pagos');
+    }
+
+    const settingsMap: Record<string, string> = {};
+    settings?.forEach((s: { key: string; value: string }) => {
+      settingsMap[s.key] = s.value;
+    });
+
+    const mpAccessToken = settingsMap.mp_access_token;
+    const platformSellerId = settingsMap.mp_platform_seller_id;
+
     if (!mpAccessToken) {
-      throw new Error('MP_ACCESS_TOKEN no configurado. Configure esta variable de entorno con su Access Token de Mercado Pago.');
+      throw new Error('MP_ACCESS_TOKEN no configurado. Configure Mercado Pago en el panel de administración.');
     }
 
     if (!platformSellerId) {
-      throw new Error('MP_PLATFORM_SELLER_ID no configurado. Configure esta variable de entorno con el Seller ID de la plataforma.');
+      throw new Error('MP_PLATFORM_SELLER_ID no configurado. Configure Mercado Pago en el panel de administración.');
     }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: RequestBody = await req.json();
     const { tripId, amount, driverAmount, platformAmount, driverSellerId, description } = body;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, DollarSign, MapPin, Save, AlertCircle } from 'lucide-react';
+import { ArrowLeft, DollarSign, MapPin, Save, AlertCircle, CreditCard, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
@@ -7,6 +7,15 @@ import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 
 type PricingRuleRow = Database['public']['Tables']['pricing_rules']['Row'];
+
+interface SystemSetting {
+  id: string;
+  key: string;
+  value: string;
+  description: string;
+  is_sensitive: boolean;
+  category: string;
+}
 
 interface SystemConfigurationProps {
   onBack: () => void;
@@ -24,8 +33,13 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
   const [platformCommissionPercent, setPlatformCommissionPercent] = useState('');
   const [surgeMultiplier, setSurgeMultiplier] = useState('');
 
+  const [mpSettings, setMpSettings] = useState<Record<string, string>>({});
+  const [showMpToken, setShowMpToken] = useState(false);
+  const [savingMp, setSavingMp] = useState(false);
+
   useEffect(() => {
     fetchPricingRules();
+    fetchMercadoPagoSettings();
   }, []);
 
   const fetchPricingRules = async () => {
@@ -53,6 +67,26 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
       console.error('Error fetching pricing rules:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMercadoPagoSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('*')
+        .eq('category', 'payment');
+
+      if (error) throw error;
+
+      const settingsMap: Record<string, string> = {};
+      data?.forEach((setting: SystemSetting) => {
+        settingsMap[setting.key] = setting.value;
+      });
+
+      setMpSettings(settingsMap);
+    } catch (error) {
+      console.error('Error fetching Mercado Pago settings:', error);
     }
   };
 
@@ -103,6 +137,35 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
     }
   };
 
+  const handleSaveMercadoPago = async () => {
+    setSavingMp(true);
+
+    try {
+      const updates = [
+        { key: 'mp_access_token', value: mpSettings.mp_access_token || '' },
+        { key: 'mp_platform_seller_id', value: mpSettings.mp_platform_seller_id || '' },
+        { key: 'mp_environment', value: mpSettings.mp_environment || 'test' },
+      ];
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('system_settings')
+          .update({ value: update.value, updated_at: new Date().toISOString() })
+          .eq('key', update.key);
+
+        if (error) throw error;
+      }
+
+      alert('Configuración de Mercado Pago guardada exitosamente');
+      fetchMercadoPagoSettings();
+    } catch (error) {
+      console.error('Error saving Mercado Pago settings:', error);
+      alert('Error al guardar la configuración de Mercado Pago');
+    } finally {
+      setSavingMp(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -131,8 +194,125 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Configuración del Sistema</h1>
-          <p className="text-gray-600">Gestionar tarifas y parámetros de la plataforma</p>
+          <p className="text-gray-600">Gestionar tarifas, pagos y parámetros de la plataforma</p>
         </div>
+
+        <Card className="mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <CreditCard className="w-6 h-6 text-blue-600" />
+            <h2 className="text-xl font-semibold text-gray-900">Mercado Pago</h2>
+          </div>
+
+          <div className="space-y-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-blue-900 mb-2 text-sm">
+                Configuración de Pagos
+              </h4>
+              <p className="text-sm text-blue-800 mb-2">
+                Configurá tus credenciales de Mercado Pago para habilitar los pagos en la plataforma.
+              </p>
+              <p className="text-xs text-blue-700">
+                Obtené tus credenciales en:{' '}
+                <a
+                  href="https://www.mercadopago.com.ar/developers/panel/app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline font-medium"
+                >
+                  Panel de Desarrolladores de Mercado Pago
+                </a>
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Access Token <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Input
+                  type={showMpToken ? 'text' : 'password'}
+                  value={mpSettings.mp_access_token || ''}
+                  onChange={(e) => setMpSettings({ ...mpSettings, mp_access_token: e.target.value })}
+                  placeholder="TEST-1234567890-XXXXXX-XXXXXXXXXXXXXXXX"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowMpToken(!showMpToken)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showMpToken ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Token de acceso de Mercado Pago (TEST para sandbox, PROD para producción)
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Platform Seller ID <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="text"
+                value={mpSettings.mp_platform_seller_id || ''}
+                onChange={(e) => setMpSettings({ ...mpSettings, mp_platform_seller_id: e.target.value })}
+                placeholder="123456789"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                User ID o Collector ID de la cuenta de Mercado Pago de la plataforma
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Entorno
+              </label>
+              <select
+                value={mpSettings.mp_environment || 'test'}
+                onChange={(e) => setMpSettings({ ...mpSettings, mp_environment: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="test">Test (Sandbox)</option>
+                <option value="production">Production (Producción)</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Ambiente de Mercado Pago (usar Test para pruebas)
+              </p>
+            </div>
+
+            <div className="pt-6 border-t border-gray-200">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-900 mb-1">Importante</p>
+                    <ul className="text-xs text-yellow-800 space-y-1 list-disc list-inside">
+                      <li>Guardá el Access Token de forma segura</li>
+                      <li>En producción, usá credenciales PROD</li>
+                      <li>El split de pagos se configura automáticamente (80% conductor, 20% plataforma)</li>
+                      <li>Los cambios se aplican inmediatamente a todos los pagos nuevos</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                variant="primary"
+                onClick={handleSaveMercadoPago}
+                disabled={savingMp || !mpSettings.mp_access_token || !mpSettings.mp_platform_seller_id}
+                fullWidth
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {savingMp ? 'Guardando...' : 'Guardar Configuración de Mercado Pago'}
+              </Button>
+            </div>
+          </div>
+        </Card>
 
         <Card className="mb-6">
           <div className="flex items-center gap-3 mb-6">
