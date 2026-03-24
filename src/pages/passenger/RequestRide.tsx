@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { calculateRoute, type Coordinates } from '../../lib/maps';
 import { formatDistance, formatDuration } from '../../lib/geo';
 import { calculateFare } from '../../lib/pricing';
+import { isPointInServiceZone } from '../../lib/serviceZones';
 
 interface RequestRideProps {
   onBack: () => void;
@@ -78,6 +79,26 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    if (!originCoords || !destinationCoords) {
+      setError('Por favor ingresá las direcciones de origen y destino');
+      setLoading(false);
+      return;
+    }
+
+    const originCheck = await isPointInServiceZone(originCoords.lat, originCoords.lon);
+    if (!originCheck.inZone) {
+      setError('El origen está fuera de nuestras zonas de servicio. Por favor elegí una dirección dentro del área de cobertura.');
+      setLoading(false);
+      return;
+    }
+
+    const destinationCheck = await isPointInServiceZone(destinationCoords.lat, destinationCoords.lon);
+    if (!destinationCheck.inZone) {
+      setError('El destino está fuera de nuestras zonas de servicio. Por favor elegí una dirección dentro del área de cobertura.');
+      setLoading(false);
+      return;
+    }
 
     try {
       if (!originCoords || !destinationCoords) {

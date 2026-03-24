@@ -15,6 +15,7 @@ import IncidentManagement from './admin/IncidentManagement';
 import AuditLogs from './admin/AuditLogs';
 import IntelligenceCenter from './admin/IntelligenceCenter';
 import DemandRadar from './admin/DemandRadar';
+import { ServiceZones } from './admin/ServiceZones';
 
 type AdminView =
   | 'overview'
@@ -27,7 +28,8 @@ type AdminView =
   | 'configuration'
   | 'audit-logs'
   | 'intelligence'
-  | 'demand-radar';
+  | 'demand-radar'
+  | 'service-zones';
 
 export function AdminDashboard() {
   const { profile } = useAuth();
@@ -56,6 +58,10 @@ export function AdminDashboard() {
 
   if (view === 'demand-radar') {
     return <DemandRadar onBack={() => setView('overview')} />;
+  }
+
+  if (view === 'service-zones') {
+    return <ServiceZones onBack={() => setView('overview')} />;
   }
 
   if (view === 'driver-verification') {
@@ -309,6 +315,26 @@ export function AdminDashboard() {
                 </p>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-600">Full transparency</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card
+            className="hover:shadow-lg transition-all cursor-pointer group"
+            onClick={() => setView('service-zones')}
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-600 transition-colors">
+                <MapPin className="w-6 h-6 text-blue-600 group-hover:text-white transition-colors" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">Zonas de Servicio</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Gestionar áreas de cobertura y precios
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">Definir zonas</span>
                 </div>
               </div>
             </div>
