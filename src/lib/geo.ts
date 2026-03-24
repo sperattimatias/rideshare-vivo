@@ -70,3 +70,5 @@ export function formatDuration(minutes: number): string {
   const remainingMinutes = minutes % 60;
   return `${hours}h ${remainingMinutes}min`;
 }
+
+export { calculateDistanceKm as default };

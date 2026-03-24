@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { MapPin, Loader, CheckCircle } from 'lucide-react';
-import { searchAddressSuggestions, type Coordinates } from '../lib/geocoding';
+import { searchAddressSuggestions, type Coordinates } from '../lib/maps';
 import { Input } from './Input';
 
 interface AddressAutocompleteProps {
@@ -23,7 +23,7 @@ export function AddressAutocomplete({
   confirmed = false
 }: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<Array<{
-    display_name: string;
+    displayName: string;
     coordinates: Coordinates;
   }>>([]);
   const [loading, setLoading] = useState(false);
@@ -78,9 +78,9 @@ export function AddressAutocomplete({
     }
   };
 
-  const handleSelectSuggestion = (suggestion: { display_name: string; coordinates: Coordinates }) => {
-    onChange(suggestion.display_name);
-    onSelectAddress(suggestion.display_name, suggestion.coordinates);
+  const handleSelectSuggestion = (suggestion: { displayName: string; coordinates: Coordinates }) => {
+    onChange(suggestion.displayName);
+    onSelectAddress(suggestion.displayName, suggestion.coordinates);
     setShowSuggestions(false);
     setSuggestions([]);
   };
@@ -123,7 +123,7 @@ export function AddressAutocomplete({
             >
               <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900 truncate">{suggestion.display_name}</p>
+                <p className="text-sm text-gray-900 truncate">{suggestion.displayName}</p>
               </div>
             </button>
           ))}

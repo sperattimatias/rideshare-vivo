@@ -3,12 +3,13 @@ import { Calendar, Clock, DollarSign, AlertCircle, ArrowLeft } from 'lucide-reac
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { AddressAutocomplete } from '../../components/AddressAutocomplete';
+import { StaticMap } from '../../components/StaticMap';
 import { STRINGS } from '../../lib/strings';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { calculateDistanceKm, calculateEstimatedDurationMinutes, formatDistance, formatDuration } from '../../lib/geo';
+import { calculateRoute, type Coordinates } from '../../lib/maps';
+import { formatDistance, formatDuration } from '../../lib/geo';
 import { calculateFare } from '../../lib/pricing';
-import { type Coordinates } from '../../lib/geocoding';
 
 interface RequestRideProps {
   onBack: () => void;
@@ -50,10 +51,15 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
     }
   };
 
-  const calculateEstimate = (origin: Coordinates, destination: Coordinates) => {
+  const calculateEstimate = async (origin: Coordinates, destination: Coordinates) => {
     try {
-      const distance = calculateDistanceKm(origin.lat, origin.lon, destination.lat, destination.lon);
-      const duration = calculateEstimatedDurationMinutes(distance);
+      const routeResult = await calculateRoute(origin, destination);
+
+      if (!routeResult.success || !routeResult.route) {
+        throw new Error(routeResult.error || 'No se pudo calcular la ruta');
+      }
+
+      const { distance, duration } = routeResult.route;
       const fare = calculateFare(distance);
 
       setEstimatedDistance(distance);
@@ -184,28 +190,47 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
               confirmed={!!destinationCoords}
             />
 
-            {estimatedFare && estimatedDistance && estimatedDuration && (
-              <Card className="bg-blue-50 border-2 border-blue-200">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-blue-800 mb-1">Tarifa estimada</p>
-                      <p className="text-3xl font-bold text-blue-900">${estimatedFare}</p>
+            {estimatedFare && estimatedDistance && estimatedDuration && originCoords && destinationCoords && (
+              <>
+                <StaticMap
+                  center={{
+                    lat: (originCoords.lat + destinationCoords.lat) / 2,
+                    lon: (originCoords.lon + destinationCoords.lon) / 2,
+                  }}
+                  zoom={13}
+                  width={600}
+                  height={300}
+                  markers={[
+                    { coordinates: originCoords, label: 'A', color: 'green' },
+                    { coordinates: destinationCoords, label: 'B', color: 'red' },
+                  ]}
+                  path={[originCoords, destinationCoords]}
+                  className="w-full"
+                  alt="Vista previa de la ruta"
+                />
+
+                <Card className="bg-blue-50 border-2 border-blue-200">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-blue-800 mb-1">Tarifa estimada</p>
+                        <p className="text-3xl font-bold text-blue-900">${estimatedFare}</p>
+                      </div>
+                      <DollarSign className="w-12 h-12 text-blue-600" />
                     </div>
-                    <DollarSign className="w-12 h-12 text-blue-600" />
+                    <div className="grid grid-cols-2 gap-4 pt-3 border-t border-blue-300">
+                      <div>
+                        <p className="text-xs text-blue-700 mb-1">Distancia</p>
+                        <p className="text-sm font-semibold text-blue-900">{formatDistance(estimatedDistance)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-blue-700 mb-1">Duración estimada</p>
+                        <p className="text-sm font-semibold text-blue-900">{formatDuration(estimatedDuration)}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4 pt-3 border-t border-blue-300">
-                    <div>
-                      <p className="text-xs text-blue-700 mb-1">Distancia</p>
-                      <p className="text-sm font-semibold text-blue-900">{formatDistance(estimatedDistance)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-blue-700 mb-1">Duración estimada</p>
-                      <p className="text-sm font-semibold text-blue-900">{formatDuration(estimatedDuration)}</p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
+                </Card>
+              </>
             )}
 
             <div className="border-t border-gray-200 pt-6">
