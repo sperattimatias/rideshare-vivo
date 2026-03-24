@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { LeafletMap } from '../../components/LeafletMap';
 import { LiveMap } from '../../components/LiveMap';
+import { ZoneDrawingMap } from '../../components/ZoneDrawingMap';
 
 type PricingRuleRow = Database['public']['Tables']['pricing_rules']['Row'];
 
@@ -41,11 +42,10 @@ export function ServiceZones({ onBack }: ServiceZonesProps) {
     name: '',
     description: '',
     is_active: true,
-    center_lat: -34.6037,
-    center_lon: -58.3816,
-    boundary_points: '',
     pricing_rule_id: '',
   });
+
+  const [drawnPoints, setDrawnPoints] = useState<Array<{ lat: number; lon: number }>>([]);
 
   useEffect(() => {
     fetchZones();
@@ -89,11 +89,9 @@ export function ServiceZones({ onBack }: ServiceZonesProps) {
       name: zone.name,
       description: zone.description,
       is_active: zone.is_active,
-      center_lat: Number(zone.center_lat),
-      center_lon: Number(zone.center_lon),
-      boundary_points: JSON.stringify(zone.boundary_points, null, 2),
       pricing_rule_id: zone.pricing_rule_id || '',
     });
+    setDrawnPoints(zone.boundary_points || []);
     setShowForm(true);
   };
 
@@ -119,25 +117,24 @@ export function ServiceZones({ onBack }: ServiceZonesProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (drawnPoints.length < 3) {
+      alert('Necesitás dibujar al menos 3 puntos en el mapa para crear una zona');
+      return;
+    }
+
     try {
-      let boundaryPoints;
-      try {
-        boundaryPoints = JSON.parse(formData.boundary_points);
-        if (!Array.isArray(boundaryPoints)) {
-          throw new Error('Boundary points must be an array');
-        }
-      } catch {
-        alert('Los puntos del límite deben ser un JSON válido (array de {lat, lon})');
-        return;
-      }
+      const centerLat =
+        drawnPoints.reduce((sum, p) => sum + p.lat, 0) / drawnPoints.length;
+      const centerLon =
+        drawnPoints.reduce((sum, p) => sum + p.lon, 0) / drawnPoints.length;
 
       const zoneData = {
         name: formData.name,
         description: formData.description,
         is_active: formData.is_active,
-        center_lat: formData.center_lat,
-        center_lon: formData.center_lon,
-        boundary_points: boundaryPoints,
+        center_lat: centerLat,
+        center_lon: centerLon,
+        boundary_points: drawnPoints,
         pricing_rule_id: formData.pricing_rule_id || null,
         updated_at: new Date().toISOString(),
       };
@@ -165,11 +162,9 @@ export function ServiceZones({ onBack }: ServiceZonesProps) {
         name: '',
         description: '',
         is_active: true,
-        center_lat: -34.6037,
-        center_lon: -58.3816,
-        boundary_points: '',
         pricing_rule_id: '',
       });
+      setDrawnPoints([]);
       fetchZones();
     } catch (error) {
       console.error('Error saving zone:', error);
@@ -184,19 +179,10 @@ export function ServiceZones({ onBack }: ServiceZonesProps) {
       name: '',
       description: '',
       is_active: true,
-      center_lat: -34.6037,
-      center_lon: -58.3816,
-      boundary_points: '',
       pricing_rule_id: '',
     });
+    setDrawnPoints([]);
   };
-
-  const exampleBoundaryPoints = [
-    { lat: -34.6037, lon: -58.3816 },
-    { lat: -34.6137, lon: -58.3716 },
-    { lat: -34.6237, lon: -58.3916 },
-    { lat: -34.6037, lon: -58.3816 },
-  ];
 
   if (loading) {
     return (
@@ -269,14 +255,34 @@ export function ServiceZones({ onBack }: ServiceZonesProps) {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-semibold text-blue-900 mb-2 text-sm">
-                  Cómo funcionan las zonas de servicio
+                  Cómo crear una zona de servicio
                 </h4>
                 <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
-                  <li>Definí polígonos de servicio usando coordenadas lat/lon</li>
-                  <li>Podés tener múltiples zonas activas simultáneamente</li>
-                  <li>Asigná reglas de precios específicas por zona</li>
-                  <li>Las solicitudes fuera de zonas activas serán rechazadas</li>
+                  <li>Hacé clic en el mapa para agregar puntos y dibujar el polígono</li>
+                  <li>Necesitás al menos 3 puntos para crear una zona válida</li>
+                  <li>Podés asignar reglas de precios específicas por zona</li>
+                  <li>Las zonas existentes aparecen en azul con líneas punteadas</li>
                 </ul>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Dibujá la Zona en el Mapa <span className="text-red-500">*</span>
+                </label>
+                <ZoneDrawingMap
+                  className="h-[500px]"
+                  center={{ lat: -32.9468, lon: -60.6393 }}
+                  zoom={13}
+                  initialPoints={drawnPoints}
+                  onPointsChange={setDrawnPoints}
+                  existingZones={zones
+                    .filter((z) => !editingZone || z.id !== editingZone.id)
+                    .map((z) => ({
+                      id: z.id,
+                      name: z.name,
+                      boundary_points: z.boundary_points,
+                    }))}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -322,51 +328,6 @@ export function ServiceZones({ onBack }: ServiceZonesProps) {
                   placeholder="Descripción de la zona de servicio..."
                   rows={3}
                 />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Centro - Latitud <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.0000001"
-                    value={formData.center_lat}
-                    onChange={(e) => setFormData({ ...formData, center_lat: parseFloat(e.target.value) })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Centro - Longitud <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.0000001"
-                    value={formData.center_lon}
-                    onChange={(e) => setFormData({ ...formData, center_lon: parseFloat(e.target.value) })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Puntos del Límite (JSON) <span className="text-red-500">*</span>
-                </label>
-                <Textarea
-                  value={formData.boundary_points}
-                  onChange={(e) => setFormData({ ...formData, boundary_points: e.target.value })}
-                  placeholder={JSON.stringify(exampleBoundaryPoints, null, 2)}
-                  rows={8}
-                  className="font-mono text-sm"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Array de objetos con lat y lon. El primer y último punto deben ser iguales para cerrar el polígono.
-                </p>
               </div>
 
               <div>
