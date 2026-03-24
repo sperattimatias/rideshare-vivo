@@ -1,20 +1,30 @@
 import type { MapProvider } from './types';
 import { NominatimProvider } from './providers/nominatim';
 import { MapboxProvider } from './providers/mapbox';
+import { getMapsConfig } from './config';
 
 export * from './types';
 
-function createMapProvider(): MapProvider {
-  const providerType = import.meta.env.VITE_MAP_PROVIDER || 'nominatim';
-  const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
+let mapProviderInstance: MapProvider | null = null;
 
-  switch (providerType) {
+async function createMapProvider(): Promise<MapProvider> {
+  const config = await getMapsConfig();
+
+  switch (config.provider) {
     case 'mapbox':
-      if (!mapboxToken) {
-        console.warn('VITE_MAPBOX_TOKEN no configurado. Usando Nominatim como fallback.');
+      if (!config.mapboxToken) {
+        console.warn('Mapbox token no configurado. Usando Nominatim como fallback.');
         return new NominatimProvider();
       }
-      return new MapboxProvider({ apiKey: mapboxToken });
+      return new MapboxProvider({ apiKey: config.mapboxToken });
+
+    case 'google':
+      if (!config.googleMapsApiKey) {
+        console.warn('Google Maps API key no configurada. Usando Nominatim como fallback.');
+        return new NominatimProvider();
+      }
+      console.warn('Google Maps provider no implementado todavía. Usando Nominatim como fallback.');
+      return new NominatimProvider();
 
     case 'nominatim':
     default:
@@ -22,14 +32,21 @@ function createMapProvider(): MapProvider {
   }
 }
 
-export const mapProvider = createMapProvider();
+async function getMapProvider(): Promise<MapProvider> {
+  if (!mapProviderInstance) {
+    mapProviderInstance = await createMapProvider();
+  }
+  return mapProviderInstance;
+}
 
 export async function geocodeAddress(address: string) {
-  return mapProvider.geocode(address);
+  const provider = await getMapProvider();
+  return provider.geocode(address);
 }
 
 export async function reverseGeocodeCoordinates(lat: number, lon: number) {
-  return mapProvider.reverseGeocode(lat, lon);
+  const provider = await getMapProvider();
+  return provider.reverseGeocode(lat, lon);
 }
 
 export async function searchAddressSuggestions(
@@ -39,7 +56,8 @@ export async function searchAddressSuggestions(
     bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number };
   }
 ) {
-  return mapProvider.searchSuggestions(query, options);
+  const provider = await getMapProvider();
+  return provider.searchSuggestions(query, options);
 }
 
 export async function calculateRoute(
@@ -47,10 +65,11 @@ export async function calculateRoute(
   destination: { lat: number; lon: number },
   options?: { alternatives?: boolean; steps?: boolean }
 ) {
-  return mapProvider.calculateRoute(origin, destination, options);
+  const provider = await getMapProvider();
+  return provider.calculateRoute(origin, destination, options);
 }
 
-export function getStaticMapUrl(options: {
+export async function getStaticMapUrl(options: {
   center: { lat: number; lon: number };
   zoom?: number;
   width?: number;
@@ -62,7 +81,8 @@ export function getStaticMapUrl(options: {
   }>;
   path?: Array<{ lat: number; lon: number }>;
 }) {
-  return mapProvider.getStaticMapUrl(options);
+  const provider = await getMapProvider();
+  return provider.getStaticMapUrl(options);
 }
 
 export function isValidCoordinates(

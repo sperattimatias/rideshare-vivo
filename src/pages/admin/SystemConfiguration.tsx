@@ -39,9 +39,15 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
   const [showMpToken, setShowMpToken] = useState(false);
   const [savingMp, setSavingMp] = useState(false);
 
+  const [mapsSettings, setMapsSettings] = useState<Record<string, string>>({});
+  const [showMapboxToken, setShowMapboxToken] = useState(false);
+  const [showGoogleKey, setShowGoogleKey] = useState(false);
+  const [savingMaps, setSavingMaps] = useState(false);
+
   useEffect(() => {
     fetchPricingRules();
     fetchMercadoPagoSettings();
+    fetchMapsSettings();
   }, []);
 
   const fetchPricingRules = async () => {
@@ -89,6 +95,26 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
       setMpSettings(settingsMap);
     } catch (error) {
       console.error('Error fetching Mercado Pago settings:', error);
+    }
+  };
+
+  const fetchMapsSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('*')
+        .eq('category', 'maps');
+
+      if (error) throw error;
+
+      const settingsMap: Record<string, string> = {};
+      data?.forEach((setting: SystemSetting) => {
+        settingsMap[setting.key] = setting.value;
+      });
+
+      setMapsSettings(settingsMap);
+    } catch (error) {
+      console.error('Error fetching maps settings:', error);
     }
   };
 
@@ -169,6 +195,35 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
     }
   };
 
+  const handleSaveMaps = async () => {
+    setSavingMaps(true);
+
+    try {
+      const updates = [
+        { key: 'maps_provider', value: mapsSettings.maps_provider || 'nominatim' },
+        { key: 'mapbox_token', value: mapsSettings.mapbox_token || '' },
+        { key: 'google_maps_api_key', value: mapsSettings.google_maps_api_key || '' },
+      ];
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('system_settings')
+          .update({ value: update.value, updated_at: new Date().toISOString() })
+          .eq('key', update.key);
+
+        if (error) throw error;
+      }
+
+      alert('Configuración de mapas guardada exitosamente. Recargá la página para aplicar los cambios.');
+      fetchMapsSettings();
+    } catch (error) {
+      console.error('Error saving maps settings:', error);
+      alert('Error al guardar la configuración de mapas');
+    } finally {
+      setSavingMaps(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -206,6 +261,149 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Configuración del Sistema</h1>
           <p className="text-gray-600">Gestionar tarifas, pagos y parámetros de la plataforma</p>
         </div>
+
+        <Card className="mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <MapPin className="w-6 h-6 text-green-600" />
+            <h2 className="text-xl font-semibold text-gray-900">Configuración de Mapas</h2>
+          </div>
+
+          <div className="space-y-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-blue-900 mb-2 text-sm">
+                Proveedor de Mapas y Geocodificación
+              </h4>
+              <p className="text-sm text-blue-800 mb-2">
+                Seleccioná el servicio de mapas que vas a usar en la plataforma.
+              </p>
+              <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+                <li><strong>Nominatim:</strong> Gratis, sin configuración, límites de uso moderados</li>
+                <li><strong>Mapbox:</strong> Token público requerido, mejor rendimiento y límites generosos</li>
+                <li><strong>Google Maps:</strong> API key requerida, más preciso pero de pago</li>
+              </ul>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Proveedor de Mapas <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={mapsSettings.maps_provider || 'nominatim'}
+                onChange={(e) => setMapsSettings({ ...mapsSettings, maps_provider: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="nominatim">Nominatim (Gratis - OpenStreetMap)</option>
+                <option value="mapbox">Mapbox</option>
+                <option value="google">Google Maps</option>
+              </select>
+            </div>
+
+            {mapsSettings.maps_provider === 'mapbox' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mapbox Public Token (pk.*) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Input
+                    type={showMapboxToken ? 'text' : 'password'}
+                    value={mapsSettings.mapbox_token || ''}
+                    onChange={(e) => setMapsSettings({ ...mapsSettings, mapbox_token: e.target.value })}
+                    placeholder="pk.eyJ1IjoibXl1c2VyIiwiYSI6ImNrMTIzNDU2Nzg5In0..."
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowMapboxToken(!showMapboxToken)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showMapboxToken ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Token público de Mapbox. Obtené uno en:{' '}
+                  <a
+                    href="https://account.mapbox.com/access-tokens/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-blue-600"
+                  >
+                    Mapbox Access Tokens
+                  </a>
+                </p>
+              </div>
+            )}
+
+            {mapsSettings.maps_provider === 'google' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Google Maps API Key <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Input
+                    type={showGoogleKey ? 'text' : 'password'}
+                    value={mapsSettings.google_maps_api_key || ''}
+                    onChange={(e) => setMapsSettings({ ...mapsSettings, google_maps_api_key: e.target.value })}
+                    placeholder="AIzaSyABC123..."
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowGoogleKey(!showGoogleKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showGoogleKey ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  API key de Google Maps. Obtené una en:{' '}
+                  <a
+                    href="https://console.cloud.google.com/google/maps-apis"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-blue-600"
+                  >
+                    Google Cloud Console
+                  </a>
+                </p>
+              </div>
+            )}
+
+            <div className="pt-6 border-t border-gray-200">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-900 mb-1">Importante</p>
+                    <ul className="text-xs text-yellow-800 space-y-1 list-disc list-inside">
+                      <li>Los cambios requieren recargar la aplicación para aplicarse</li>
+                      <li>Nominatim es gratis pero tiene límites de uso más bajos</li>
+                      <li>Mapbox ofrece 100,000 solicitudes gratis por mes</li>
+                      <li>Google Maps es de pago pero ofrece la mayor precisión</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                variant="primary"
+                onClick={handleSaveMaps}
+                disabled={savingMaps}
+                fullWidth
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {savingMaps ? 'Guardando...' : 'Guardar Configuración de Mapas'}
+              </Button>
+            </div>
+          </div>
+        </Card>
 
         <Card className="mb-6">
           <div className="flex items-center gap-3 mb-6">

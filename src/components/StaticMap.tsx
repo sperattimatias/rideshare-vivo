@@ -1,4 +1,5 @@
-import { mapProvider } from '../lib/maps';
+import { useState, useEffect } from 'react';
+import { getStaticMapUrl } from '../lib/maps';
 import type { Coordinates } from '../lib/maps';
 
 interface StaticMapProps {
@@ -26,7 +27,44 @@ export function StaticMap({
   className = '',
   alt = 'Mapa',
 }: StaticMapProps) {
-  if (mapProvider.name === 'nominatim') {
+  const [mapUrl, setMapUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadMapUrl() {
+      try {
+        const url = await getStaticMapUrl({
+          center,
+          zoom,
+          width,
+          height,
+          markers,
+          path,
+        });
+        setMapUrl(url);
+      } catch (error) {
+        console.error('Error loading map URL:', error);
+        setMapUrl(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadMapUrl();
+  }, [center.lat, center.lon, zoom, width, height, markers, path]);
+
+  if (loading) {
+    return (
+      <div
+        className={`bg-gray-100 border-2 border-gray-300 rounded-lg flex items-center justify-center ${className}`}
+        style={{ width: `${width}px`, height: `${height}px` }}
+      >
+        <p className="text-gray-600 text-sm">Cargando mapa...</p>
+      </div>
+    );
+  }
+
+  if (!mapUrl) {
     return (
       <div
         className={`bg-gray-100 border-2 border-gray-300 rounded-lg flex items-center justify-center ${className}`}
@@ -37,21 +75,12 @@ export function StaticMap({
             Vista previa de mapa no disponible con el proveedor actual
           </p>
           <p className="text-gray-500 text-xs mt-2">
-            Configurá VITE_MAPBOX_TOKEN para habilitar mapas visuales
+            Configurá Mapbox o Google Maps en Configuración del Sistema
           </p>
         </div>
       </div>
     );
   }
-
-  const mapUrl = mapProvider.getStaticMapUrl({
-    center,
-    zoom,
-    width,
-    height,
-    markers,
-    path,
-  });
 
   return (
     <img
