@@ -97,7 +97,7 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
         .from('drivers')
         .select(`
           *,
-          user_profiles(full_name, phone, email)
+          user_profiles(full_name, phone)
         `)
         .order('created_at', { ascending: false });
 
@@ -107,7 +107,21 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
 
       const { data, error } = await query;
       if (error) throw error;
-      setDrivers(data as any);
+
+      const driversWithEmail = await Promise.all(
+        (data || []).map(async (driver: any) => {
+          const { data: authUser } = await supabase.auth.admin.getUserById(driver.user_id);
+          return {
+            ...driver,
+            user_profiles: {
+              ...driver.user_profiles,
+              email: authUser?.user?.email || ''
+            }
+          };
+        })
+      );
+
+      setDrivers(driversWithEmail as any);
     } catch (error) {
       console.error('Error fetching drivers:', error);
     } finally {

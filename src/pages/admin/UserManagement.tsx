@@ -34,10 +34,6 @@ export function UserManagement({ onBack }: UserManagementProps) {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-
-      if (authError) throw authError;
-
       const { data: profiles, error: profilesError } = await supabase
         .from('user_profiles')
         .select('*')
@@ -45,17 +41,14 @@ export function UserManagement({ onBack }: UserManagementProps) {
 
       if (profilesError) throw profilesError;
 
-      const emailMap = new Map();
-      authUsers.users.forEach(u => {
-        emailMap.set(u.id, u.email);
-      });
-
       const usersWithDetails: UserWithDetails[] = [];
 
       for (const profile of profiles || []) {
+        const { data: authUser } = await supabase.auth.admin.getUserById(profile.id);
+
         const userDetail: UserWithDetails = {
           ...profile,
-          email: emailMap.get(profile.id) || ''
+          email: authUser?.user?.email || ''
         };
 
         if (profile.user_type === 'PASSENGER' || filter === 'all') {
