@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, MapPin, CreditCard as Edit2, Trash2, Save, X, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Plus, MapPin, CreditCard as Edit2, Trash2, Save, X, AlertCircle, Map } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
@@ -7,6 +7,8 @@ import { Textarea } from '../../components/Textarea';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
+import { LeafletMap } from '../../components/LeafletMap';
+import { LiveMap } from '../../components/LiveMap';
 
 type PricingRuleRow = Database['public']['Tables']['pricing_rules']['Row'];
 
@@ -33,6 +35,7 @@ export function ServiceZones({ onBack }: ServiceZonesProps) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingZone, setEditingZone] = useState<ServiceZone | null>(null);
+  const [useRealMap, setUseRealMap] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -227,6 +230,27 @@ export function ServiceZones({ onBack }: ServiceZonesProps) {
             </Button>
           )}
         </div>
+
+        <Card className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Mapa de Zonas</h2>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setUseRealMap(!useRealMap)}
+              >
+                <Map className="w-4 h-4 mr-2" />
+                {useRealMap ? 'Mapa Simple' : 'Mapa Real (OSM)'}
+              </Button>
+            </div>
+          </div>
+          {useRealMap ? (
+            <LeafletMap className="h-[400px]" />
+          ) : (
+            <LiveMap className="h-[400px]" />
+          )}
+        </Card>
 
         {showForm && (
           <Card className="mb-6">

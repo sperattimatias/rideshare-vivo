@@ -44,6 +44,12 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
   const [showGoogleKey, setShowGoogleKey] = useState(false);
   const [savingMaps, setSavingMaps] = useState(false);
 
+  const [mapProviders, setMapProviders] = useState({
+    passenger_map_provider: 'openstreetmap',
+    driver_map_provider: 'openstreetmap',
+    admin_map_provider: 'openstreetmap',
+  });
+
   useEffect(() => {
     fetchPricingRules();
     fetchMercadoPagoSettings();
@@ -100,19 +106,34 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
 
   const fetchMapsSettings = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: settingsData, error: settingsError } = await supabase
         .from('system_settings')
         .select('*')
         .eq('category', 'maps');
 
-      if (error) throw error;
+      if (settingsError) throw settingsError;
 
       const settingsMap: Record<string, string> = {};
-      data?.forEach((setting: SystemSetting) => {
+      settingsData?.forEach((setting: SystemSetting) => {
         settingsMap[setting.key] = setting.value;
       });
 
       setMapsSettings(settingsMap);
+
+      const { data: systemSettings, error: systemError } = await supabase
+        .from('system_settings')
+        .select('passenger_map_provider, driver_map_provider, admin_map_provider')
+        .maybeSingle();
+
+      if (systemError) throw systemError;
+
+      if (systemSettings) {
+        setMapProviders({
+          passenger_map_provider: systemSettings.passenger_map_provider || 'openstreetmap',
+          driver_map_provider: systemSettings.driver_map_provider || 'openstreetmap',
+          admin_map_provider: systemSettings.admin_map_provider || 'openstreetmap',
+        });
+      }
     } catch (error) {
       console.error('Error fetching maps settings:', error);
     }
@@ -214,6 +235,18 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
         if (error) throw error;
       }
 
+      const { error: providerError } = await supabase
+        .from('system_settings')
+        .update({
+          passenger_map_provider: mapProviders.passenger_map_provider,
+          driver_map_provider: mapProviders.driver_map_provider,
+          admin_map_provider: mapProviders.admin_map_provider,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', (await supabase.from('system_settings').select('id').maybeSingle()).data?.id);
+
+      if (providerError) throw providerError;
+
       alert('Configuración de mapas guardada exitosamente. Recargá la página para aplicar los cambios.');
       fetchMapsSettings();
     } catch (error) {
@@ -271,31 +304,86 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
           <div className="space-y-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <h4 className="font-semibold text-blue-900 mb-2 text-sm">
-                Proveedor de Mapas y Geocodificación
+                Proveedor de Mapas por Rol
               </h4>
               <p className="text-sm text-blue-800 mb-2">
-                Seleccioná el servicio de mapas que vas a usar en la plataforma.
+                Seleccioná el proveedor de mapas para cada tipo de usuario. Podés usar diferentes proveedores según el rol.
               </p>
               <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-                <li><strong>Nominatim:</strong> Gratis, sin configuración, límites de uso moderados</li>
-                <li><strong>Mapbox:</strong> Token público requerido, mejor rendimiento y límites generosos</li>
-                <li><strong>Google Maps:</strong> API key requerida, más preciso pero de pago</li>
+                <li><strong>OpenStreetMap:</strong> Gratis, sin configuración necesaria</li>
+                <li><strong>Mapbox:</strong> Token público requerido, mejor rendimiento</li>
+                <li><strong>Google Maps:</strong> API key requerida, mayor precisión</li>
               </ul>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Proveedor de Mapas <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={mapsSettings.maps_provider || 'nominatim'}
-                onChange={(e) => setMapsSettings({ ...mapsSettings, maps_provider: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="nominatim">Nominatim (Gratis - OpenStreetMap)</option>
-                <option value="mapbox">Mapbox</option>
-                <option value="google">Google Maps</option>
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Proveedor para Pasajeros
+                </label>
+                <select
+                  value={mapProviders.passenger_map_provider}
+                  onChange={(e) => setMapProviders({ ...mapProviders, passenger_map_provider: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="openstreetmap">OpenStreetMap</option>
+                  <option value="mapbox">Mapbox</option>
+                  <option value="googlemaps">Google Maps</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Proveedor para Conductores
+                </label>
+                <select
+                  value={mapProviders.driver_map_provider}
+                  onChange={(e) => setMapProviders({ ...mapProviders, driver_map_provider: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="openstreetmap">OpenStreetMap</option>
+                  <option value="mapbox">Mapbox</option>
+                  <option value="googlemaps">Google Maps</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Proveedor para Admin
+                </label>
+                <select
+                  value={mapProviders.admin_map_provider}
+                  onChange={(e) => setMapProviders({ ...mapProviders, admin_map_provider: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="openstreetmap">OpenStreetMap</option>
+                  <option value="mapbox">Mapbox</option>
+                  <option value="googlemaps">Google Maps</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm">
+                Configuración de Geocodificación (Global)
+              </h4>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Proveedor de Geocodificación <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={mapsSettings.maps_provider || 'nominatim'}
+                  onChange={(e) => setMapsSettings({ ...mapsSettings, maps_provider: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="nominatim">Nominatim (Gratis - OpenStreetMap)</option>
+                  <option value="mapbox">Mapbox</option>
+                  <option value="google">Google Maps</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Este proveedor se usa para convertir direcciones en coordenadas (geocodificación) y búsqueda de direcciones.
+                </p>
+              </div>
             </div>
 
             {mapsSettings.maps_provider === 'mapbox' && (

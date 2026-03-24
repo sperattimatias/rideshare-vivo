@@ -35,6 +35,38 @@ El sistema permite elegir entre dos tipos de mapa:
 - Marcadores interactivos
 - Datos geográficos precisos
 
+## Configuración de Proveedores de Mapas
+
+### Desde el Panel de Administración
+
+**Ruta**: Panel Admin → "Configuración del Sistema" → Sección "Configuración de Mapas"
+
+Podés configurar **diferentes proveedores de mapas para cada rol**:
+
+1. **Proveedor para Pasajeros**: Mapas que ven los usuarios pasajeros
+2. **Proveedor para Conductores**: Mapas que ven los conductores
+3. **Proveedor para Admin**: Mapas del panel administrativo
+
+**Opciones disponibles**:
+- OpenStreetMap (por defecto, gratis)
+- Mapbox (requiere configuración futura)
+- Google Maps (requiere configuración futura)
+
+**Configuración de Geocodificación**:
+Selección global del proveedor para convertir direcciones en coordenadas:
+- Nominatim (OpenStreetMap) - Gratis
+- Mapbox - Requiere token
+- Google Maps - Requiere API key
+
+### Cómo Cambiar el Proveedor
+
+1. Ingresá al panel de administración
+2. Navegá a "Configuración del Sistema"
+3. En la sección "Configuración de Mapas"
+4. Seleccioná el proveedor para cada rol
+5. Guardá los cambios
+6. Recargá la aplicación para aplicar
+
 ## Dónde Usar el Mapa Real
 
 Los mapas de OpenStreetMap están integrados en **todas las vistas críticas** de la plataforma:
@@ -57,6 +89,12 @@ Los mapas de OpenStreetMap están integrados en **todas las vistas críticas** d
 - Mapa de demanda en tiempo real
 - Visualización de zonas calientes
 - Toggle para cambiar entre mapa simple y OSM
+
+#### 4. Zonas de Servicio
+**Ruta**: `/admin/dashboard` → "Zonas de Servicio"
+- Mapa para visualizar zonas de cobertura
+- Toggle para cambiar entre mapa simple y OSM
+- Creación y edición de polígonos de servicio
 
 ### Lado Pasajero
 
