@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogOut, Users, Car, TrendingUp, DollarSign, AlertCircle, FileText, Settings, Activity, Shield } from 'lucide-react';
+import { LogOut, Users, Car, TrendingUp, DollarSign, AlertCircle, FileText, Settings, Activity, Shield, Brain, MapPin } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { supabase } from '../lib/supabase';
@@ -13,6 +13,8 @@ import { SystemConfiguration } from './admin/SystemConfiguration';
 import OperationalDashboard from './admin/OperationalDashboard';
 import IncidentManagement from './admin/IncidentManagement';
 import AuditLogs from './admin/AuditLogs';
+import IntelligenceCenter from './admin/IntelligenceCenter';
+import DemandRadar from './admin/DemandRadar';
 
 type AdminView =
   | 'overview'
@@ -23,7 +25,9 @@ type AdminView =
   | 'trip-monitoring'
   | 'user-management'
   | 'configuration'
-  | 'audit-logs';
+  | 'audit-logs'
+  | 'intelligence'
+  | 'demand-radar';
 
 export function AdminDashboard() {
   const { profile } = useAuth();
@@ -44,6 +48,14 @@ export function AdminDashboard() {
 
   if (view === 'audit-logs') {
     return <AuditLogs />;
+  }
+
+  if (view === 'intelligence') {
+    return <IntelligenceCenter />;
+  }
+
+  if (view === 'demand-radar') {
+    return <DemandRadar />;
   }
 
   if (view === 'driver-verification') {
@@ -243,12 +255,52 @@ export function AdminDashboard() {
           </Card>
 
           <Card
+            className="hover:shadow-lg transition-all cursor-pointer group border-2 border-purple-200 bg-purple-50"
+            onClick={() => setView('intelligence')}
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center group-hover:bg-purple-700 transition-colors">
+                <Brain className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">Intelligence Center</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  AI-powered monitoring and smart matching
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">Intelligent system</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card
+            className="hover:shadow-lg transition-all cursor-pointer group"
+            onClick={() => setView('demand-radar')}
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-600 transition-colors">
+                <MapPin className="w-6 h-6 text-green-600 group-hover:text-white transition-colors" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">Demand Radar</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Zone-based demand analytics & heatmap
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600">Demand analytics</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card
             className="hover:shadow-lg transition-all cursor-pointer group"
             onClick={() => setView('audit-logs')}
           >
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-600 transition-colors">
-                <Shield className="w-6 h-6 text-purple-600 group-hover:text-white transition-colors" />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-gray-600 transition-colors">
+                <Shield className="w-6 h-6 text-gray-600 group-hover:text-white transition-colors" />
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900 mb-1">Audit Logs</h3>
