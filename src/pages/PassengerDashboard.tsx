@@ -24,6 +24,8 @@ export function PassengerDashboard() {
 
   useEffect(() => {
     fetchPassengerData();
+    const interval = setInterval(fetchPassengerData, 10000);
+    return () => clearInterval(interval);
   }, [profile]);
 
   const fetchPassengerData = async () => {
@@ -146,20 +148,27 @@ export function PassengerDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTrip && (
-          <Card className="mb-6 bg-blue-50 border-2 border-blue-200">
-            <div className="flex items-start gap-3">
-              <Car className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+          <Card className="mb-6 bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300 shadow-md">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center animate-pulse">
+                  <Car className="w-6 h-6 text-white" />
+                </div>
+              </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-blue-900 mb-2">Tenés un viaje activo</h3>
-                <p className="text-blue-800 mb-4">
-                  {activeTrip.status === 'REQUESTED' && 'Buscando conductor...'}
-                  {activeTrip.status === 'ACCEPTED' && 'Conductor asignado, en camino'}
+                <h3 className="font-bold text-blue-900 mb-2 text-lg">Tenés un viaje activo</h3>
+                <p className="text-blue-800 mb-1 font-medium">
+                  {activeTrip.status === 'REQUESTED' && 'Buscando conductor disponible...'}
+                  {activeTrip.status === 'ACCEPTED' && 'Conductor asignado y en camino'}
                   {activeTrip.status === 'DRIVER_ARRIVING' && 'El conductor está llegando'}
-                  {activeTrip.status === 'DRIVER_ARRIVED' && 'Tu conductor llegó'}
-                  {activeTrip.status === 'IN_PROGRESS' && 'Viaje en curso'}
+                  {activeTrip.status === 'DRIVER_ARRIVED' && 'Tu conductor llegó al punto de encuentro'}
+                  {activeTrip.status === 'IN_PROGRESS' && 'Viaje en curso hacia tu destino'}
+                </p>
+                <p className="text-sm text-blue-700 mb-4">
+                  Origen: {activeTrip.origin_address}
                 </p>
                 <Button variant="primary" size="sm" onClick={() => setView('active')}>
-                  Ver detalles
+                  Ver detalles del viaje
                 </Button>
               </div>
             </div>

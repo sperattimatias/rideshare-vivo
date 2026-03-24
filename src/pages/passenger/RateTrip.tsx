@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { ArrowLeft, Star, Send } from 'lucide-react';
+import { ArrowLeft, Star, Send, ThumbsUp, ThumbsDown, MessageSquare } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { supabase } from '../../lib/supabase';
@@ -27,6 +27,25 @@ export function RateTrip({ tripId, onBack, onComplete }: RateTripProps) {
   const [hoveredRating, setHoveredRating] = useState(0);
   const [comment, setComment] = useState('');
   const [error, setError] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
+
+  const positiveCategories = [
+    'Muy amable',
+    'Conducción segura',
+    'Auto limpio',
+    'Conversación agradable',
+    'Llegó rápido',
+    'Siguió la ruta óptima',
+  ];
+
+  const negativeCategories = [
+    'Conducción brusca',
+    'Auto sucio',
+    'Música muy alta',
+    'Llegó tarde',
+    'Ruta innecesariamente larga',
+    'Actitud descortés',
+  ];
 
   useEffect(() => {
     fetchTripDetails();
@@ -53,12 +72,30 @@ export function RateTrip({ tripId, onBack, onComplete }: RateTripProps) {
         setRating(data.passenger_rating);
         setComment(data.passenger_comment || '');
       }
+
+      const { data: existingRating } = await supabase
+        .from('ratings')
+        .select('rating, comment, categories')
+        .eq('trip_id', tripId)
+        .maybeSingle();
+
+      if (existingRating) {
+        setRating(existingRating.rating);
+        setComment(existingRating.comment || '');
+        setCategories(existingRating.categories || []);
+      }
     } catch (error) {
       console.error('Error fetching trip details:', error);
       setError('Error al cargar los detalles del viaje');
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleCategory = (category: string) => {
+    setCategories((prev) =>
+      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
+    );
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -68,40 +105,60 @@ export function RateTrip({ tripId, onBack, onComplete }: RateTripProps) {
       return;
     }
 
+    if (!trip?.driver_id) {
+      setError('Error: no se pudo encontrar el conductor');
+      return;
+    }
+
     setSubmitting(true);
     setError('');
 
     try {
-      const { error: updateError } = await supabase
-        .from('trips')
+      const { error: ratingError } = await supabase.from('ratings').insert([
+        {
+          trip_id: tripId,
+          driver_id: trip.driver_id,
+          passenger_id: trip.passenger_id,
+          rating,
+          comment: comment || null,
+          categories: categories.length > 0 ? categories : null,
+        },
+      ]);
+
+      if (ratingError) throw ratingError;
+
+      const { data: ratings, error: fetchError } = await supabase
+        .from('ratings')
+        .select('rating')
+        .eq('driver_id', trip.driver_id);
+
+      if (fetchError) throw fetchError;
+
+      const totalRatings = ratings.length;
+      const averageRating = ratings.reduce((sum, r) => sum + r.rating, 0) / totalRatings;
+
+      await supabase
+        .from('drivers')
         .update({
-          passenger_rating: rating,
-          passenger_comment: comment || null,
+          total_ratings: totalRatings,
+          average_rating: averageRating,
         })
-        .eq('id', tripId);
+        .eq('id', trip.driver_id);
 
-      if (updateError) throw updateError;
+      const { data: driver } = await supabase
+        .from('drivers')
+        .select('score')
+        .eq('id', trip.driver_id)
+        .maybeSingle();
 
-      if (trip?.driver_id) {
-        const { data: driver } = await supabase
+      if (driver) {
+        const ratingBonus = (rating - 3) * 2;
+        const newScore = Math.max(0, Math.min(100, driver.score + ratingBonus));
+
+        await supabase
           .from('drivers')
-          .select('total_ratings, average_rating')
-          .eq('id', trip.driver_id)
-          .maybeSingle();
-
-        if (driver) {
-          const newTotalRatings = driver.total_ratings + 1;
-          const newAverageRating =
-            (driver.average_rating * driver.total_ratings + rating) / newTotalRatings;
-
-          await supabase
-            .from('drivers')
-            .update({
-              total_ratings: newTotalRatings,
-              average_rating: newAverageRating,
-            })
-            .eq('id', trip.driver_id);
-        }
+          .update({ score: newScore })
+          .eq('id', trip.driver_id);
       }
 
       onComplete();
@@ -148,7 +205,7 @@ export function RateTrip({ tripId, onBack, onComplete }: RateTripProps) {
 
   const driver = trip.driver;
   const driverProfile = driver.user_profile;
-  const alreadyRated = trip.passenger_rating !== null;
+  const alreadyRated = categories.length > 0 || (trip.passenger_rating !== null && rating > 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -251,15 +308,81 @@ export function RateTrip({ tripId, onBack, onComplete }: RateTripProps) {
               </p>
             </div>
 
+            {rating > 0 && !alreadyRated && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3">
+                  {rating >= 4 ? (
+                    <div className="flex items-center gap-2">
+                      <ThumbsUp className="w-5 h-5 text-green-600" />
+                      <span>¿Qué te gustó?</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <ThumbsDown className="w-5 h-5 text-red-600" />
+                      <span>¿Qué podría mejorar?</span>
+                    </div>
+                  )}
+                </h3>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {(rating >= 4 ? positiveCategories : negativeCategories).map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => toggleCategory(category)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                        categories.includes(category)
+                          ? rating >= 4
+                            ? 'bg-green-600 text-white'
+                            : 'bg-red-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {alreadyRated && categories.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3">
+                  <div className="flex items-center gap-2">
+                    {rating >= 4 ? (
+                      <ThumbsUp className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <ThumbsDown className="w-5 h-5 text-red-600" />
+                    )}
+                    <span>Categorías seleccionadas</span>
+                  </div>
+                </h3>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {categories.map((category) => (
+                    <span
+                      key={category}
+                      className={`px-4 py-2 rounded-full text-sm font-medium ${
+                        rating >= 4
+                          ? 'bg-green-600 text-white'
+                          : 'bg-red-600 text-white'
+                      }`}
+                    >
+                      {category}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Comentario (opcional)
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <MessageSquare className="w-4 h-4 text-blue-600" />
+                Comentario adicional (opcional)
               </label>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 disabled={alreadyRated}
-                placeholder="Contanos sobre tu experiencia..."
+                placeholder="Compartí más detalles sobre tu experiencia..."
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                 rows={4}
                 maxLength={500}

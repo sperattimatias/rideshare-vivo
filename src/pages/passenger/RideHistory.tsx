@@ -20,6 +20,73 @@ interface RideHistoryProps {
   onViewTrip: (tripId: string) => void;
 }
 
+function RatingDisplay({ tripId, onRate }: { tripId: string; onRate: (tripId: string) => void }) {
+  const [hasRating, setHasRating] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkRating();
+  }, [tripId]);
+
+  const checkRating = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('ratings')
+        .select('rating')
+        .eq('trip_id', tripId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setHasRating(true);
+        setRating(data.rating);
+      }
+    } catch (error) {
+      console.error('Error checking rating:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="text-xs text-gray-500">Cargando...</div>;
+  }
+
+  if (!hasRating) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          onRate(tripId);
+        }}
+      >
+        <Star className="w-4 h-4 mr-1" />
+        Calificar
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1 text-sm text-gray-600">
+      <span>Tu calificación:</span>
+      <div className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`w-4 h-4 ${
+              star <= rating ? 'text-yellow-500 fill-current' : 'text-gray-300'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function RideHistory({ onBack, onRateTrip, onViewTrip }: RideHistoryProps) {
   const { user } = useAuth();
   const [trips, setTrips] = useState<TripWithDetails[]>([]);
@@ -235,36 +302,8 @@ export function RideHistory({ onBack, onRateTrip, onViewTrip }: RideHistoryProps
                         </span>
                       </div>
 
-                      {trip.status === 'COMPLETED' && !trip.passenger_rating && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRateTrip(trip.id);
-                          }}
-                        >
-                          <Star className="w-4 h-4 mr-1" />
-                          Calificar
-                        </Button>
-                      )}
-
-                      {trip.passenger_rating && (
-                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <span>Tu calificación:</span>
-                          <div className="flex items-center gap-0.5">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className={`w-4 h-4 ${
-                                  star <= (trip.passenger_rating || 0)
-                                    ? 'text-yellow-500 fill-current'
-                                    : 'text-gray-300'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                        </div>
+                      {trip.status === 'COMPLETED' && (
+                        <RatingDisplay tripId={trip.id} onRate={onRateTrip} />
                       )}
                     </div>
                   </div>
