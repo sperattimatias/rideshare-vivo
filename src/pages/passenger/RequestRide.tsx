@@ -5,6 +5,8 @@ import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { calculateDistanceKm, calculateEstimatedDurationMinutes, formatDistance, formatDuration } from '../../lib/geo';
+import { calculateFare } from '../../lib/pricing';
 
 interface RequestRideProps {
   onBack: () => void;
@@ -16,19 +18,41 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [estimatedFare, setEstimatedFare] = useState<number | null>(null);
+  const [estimatedDistance, setEstimatedDistance] = useState<number | null>(null);
+  const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
 
   const [originAddress, setOriginAddress] = useState('');
+  const [originLat, setOriginLat] = useState('');
+  const [originLon, setOriginLon] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
+  const [destinationLat, setDestinationLat] = useState('');
+  const [destinationLon, setDestinationLon] = useState('');
   const [scheduledFor, setScheduledFor] = useState('');
   const [notes, setNotes] = useState('');
 
   const calculateEstimate = () => {
-    const baseDistance = Math.random() * 15 + 2;
-    const baseFare = 500;
-    const perKmRate = 150;
-    const estimated = baseFare + (baseDistance * perKmRate);
+    try {
+      const lat1 = parseFloat(originLat);
+      const lon1 = parseFloat(originLon);
+      const lat2 = parseFloat(destinationLat);
+      const lon2 = parseFloat(destinationLon);
 
-    setEstimatedFare(Math.round(estimated));
+      if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
+        setError('Por favor ingresá coordenadas válidas para origen y destino');
+        return;
+      }
+
+      const distance = calculateDistanceKm(lat1, lon1, lat2, lon2);
+      const duration = calculateEstimatedDurationMinutes(distance);
+      const fare = calculateFare(distance);
+
+      setEstimatedDistance(distance);
+      setEstimatedDuration(duration);
+      setEstimatedFare(fare);
+      setError('');
+    } catch (err) {
+      setError((err as Error).message);
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -47,14 +71,23 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
         throw new Error('Perfil de pasajero no encontrado');
       }
 
+      const lat1 = parseFloat(originLat);
+      const lon1 = parseFloat(originLon);
+      const lat2 = parseFloat(destinationLat);
+      const lon2 = parseFloat(destinationLon);
+
       const tripData = {
         passenger_id: passenger.id,
         origin_address: originAddress,
-        origin_location: `POINT(-58.3816 -34.6037)`,
+        origin_latitude: lat1,
+        origin_longitude: lon1,
         destination_address: destinationAddress,
-        destination_location: `POINT(-58.3716 -34.6137)`,
+        destination_latitude: lat2,
+        destination_longitude: lon2,
         status: 'REQUESTED' as const,
         estimated_fare: estimatedFare,
+        estimated_distance_km: estimatedDistance,
+        estimated_duration_minutes: estimatedDuration,
         scheduled_for: scheduledFor || undefined,
       };
 
@@ -103,9 +136,9 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
             <div className="flex items-start gap-2">
               <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-yellow-900">Funcionalidad en desarrollo</p>
+                <p className="text-sm font-medium text-yellow-900">Geocodificación en desarrollo</p>
                 <p className="text-sm text-yellow-800 mt-1">
-                  La búsqueda de direcciones con geocodificación se implementará en la próxima fase. Por ahora, ingresá las direcciones manualmente.
+                  Por ahora, ingresá manualmente las direcciones y coordenadas. La búsqueda automática se implementará próximamente.
                 </p>
               </div>
             </div>
@@ -125,6 +158,26 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
                 required
                 fullWidth
               />
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <Input
+                  type="number"
+                  step="any"
+                  value={originLat}
+                  onChange={(e) => setOriginLat(e.target.value)}
+                  placeholder="Latitud (ej: -34.6037)"
+                  required
+                  fullWidth
+                />
+                <Input
+                  type="number"
+                  step="any"
+                  value={originLon}
+                  onChange={(e) => setOriginLon(e.target.value)}
+                  placeholder="Longitud (ej: -58.3816)"
+                  required
+                  fullWidth
+                />
+              </div>
             </div>
 
             <div>
@@ -140,9 +193,29 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
                 required
                 fullWidth
               />
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <Input
+                  type="number"
+                  step="any"
+                  value={destinationLat}
+                  onChange={(e) => setDestinationLat(e.target.value)}
+                  placeholder="Latitud (ej: -34.6137)"
+                  required
+                  fullWidth
+                />
+                <Input
+                  type="number"
+                  step="any"
+                  value={destinationLon}
+                  onChange={(e) => setDestinationLon(e.target.value)}
+                  placeholder="Longitud (ej: -58.3716)"
+                  required
+                  fullWidth
+                />
+              </div>
             </div>
 
-            {originAddress && destinationAddress && !estimatedFare && (
+            {originAddress && destinationAddress && originLat && originLon && destinationLat && destinationLon && !estimatedFare && (
               <Button
                 type="button"
                 variant="outline"
@@ -154,17 +227,26 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
               </Button>
             )}
 
-            {estimatedFare && (
+            {estimatedFare && estimatedDistance && estimatedDuration && (
               <Card className="bg-blue-50 border-2 border-blue-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-blue-800 mb-1">Tarifa estimada</p>
-                    <p className="text-3xl font-bold text-blue-900">${estimatedFare}</p>
-                    <p className="text-xs text-blue-700 mt-1">
-                      Distancia estimada: {(Math.random() * 15 + 2).toFixed(1)} km
-                    </p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-blue-800 mb-1">Tarifa estimada</p>
+                      <p className="text-3xl font-bold text-blue-900">${estimatedFare}</p>
+                    </div>
+                    <DollarSign className="w-12 h-12 text-blue-600" />
                   </div>
-                  <DollarSign className="w-12 h-12 text-blue-600" />
+                  <div className="grid grid-cols-2 gap-4 pt-3 border-t border-blue-300">
+                    <div>
+                      <p className="text-xs text-blue-700 mb-1">Distancia</p>
+                      <p className="text-sm font-semibold text-blue-900">{formatDistance(estimatedDistance)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-700 mb-1">Duración estimada</p>
+                      <p className="text-sm font-semibold text-blue-900">{formatDuration(estimatedDuration)}</p>
+                    </div>
+                  </div>
                 </div>
               </Card>
             )}

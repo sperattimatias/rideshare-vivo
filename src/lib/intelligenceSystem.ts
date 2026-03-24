@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { calculateDistanceKm, calculateEstimatedDurationMinutes } from './geo';
 
 export interface DriverScore {
   driver_id: string;
@@ -129,24 +130,6 @@ export async function setActiveConfig(configId: string): Promise<void> {
   await supabase.from('matching_config').update({ is_active: true }).eq('id', configId);
 }
 
-function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
 
 export async function findBestDriverMatch(
   passengerLat: number,
@@ -215,7 +198,7 @@ export async function findBestDriverMatch(
     const location = driver.current_location as { latitude: number; longitude: number };
     if (!location?.latitude || !location?.longitude) continue;
 
-    const distance = calculateDistance(
+    const distance = calculateDistanceKm(
       passengerLat,
       passengerLon,
       location.latitude,
@@ -241,8 +224,7 @@ export async function findBestDriverMatch(
       ratingScore * config.rating_weight +
       historyScore * config.history_weight;
 
-    // Estimate ETA (rough calculation: 2 min per km + 1 min base)
-    const eta = Math.ceil(distance * 2 + 1);
+    const eta = calculateEstimatedDurationMinutes(distance);
 
     matches.push({
       driver_id: driver.id,

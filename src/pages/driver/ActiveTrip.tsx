@@ -4,6 +4,7 @@ import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
+import { calculateFare } from '../../lib/pricing';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type PassengerRow = Database['public']['Tables']['passengers']['Row'];
@@ -160,9 +161,7 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
       return;
     }
 
-    const baseFare = 500;
-    const perKmRate = 150;
-    const finalFare = Math.round(baseFare + (distance * perKmRate));
+    const finalFare = calculateFare(distance);
 
     const duration = Math.floor(
       (Date.now() - new Date(trip.started_at || trip.accepted_at).getTime()) / 60000

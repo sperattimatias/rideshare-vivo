@@ -4,6 +4,8 @@ import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
+import { calculateDistanceKm, formatDistance, isValidCoordinate } from '../../lib/geo';
+import { calculateDriverEarnings } from '../../lib/pricing';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type PassengerRow = Database['public']['Tables']['passengers']['Row'];
@@ -105,8 +107,25 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
     }
   };
 
-  const calculateDistance = (trip: TripRow) => {
-    return (Math.random() * 10 + 1).toFixed(1);
+  const getDistanceToPassenger = (trip: TripRow): string | null => {
+    const driverLat = -33.1234;
+    const driverLon = -61.4567;
+
+    if (!isValidCoordinate(trip.origin_latitude, trip.origin_longitude)) {
+      return null;
+    }
+
+    try {
+      const distance = calculateDistanceKm(
+        driverLat,
+        driverLon,
+        trip.origin_latitude!,
+        trip.origin_longitude!
+      );
+      return formatDistance(distance);
+    } catch {
+      return null;
+    }
   };
 
   if (!isOnline) {
@@ -162,7 +181,7 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
       {requests.map((trip) => {
         const passenger = trip.passenger;
         const passengerProfile = passenger?.user_profile;
-        const distance = calculateDistance(trip);
+        const distanceToPassenger = getDistanceToPassenger(trip);
 
         return (
           <Card key={trip.id} className="border-2 border-blue-200 hover:shadow-lg transition-shadow">
@@ -191,10 +210,12 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">{passengerProfile.full_name}</p>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Navigation className="w-4 h-4" />
-                          <span>{distance} km de distancia</span>
-                        </div>
+                        {distanceToPassenger && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Navigation className="w-4 h-4" />
+                            <span>{distanceToPassenger} de distancia</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -235,7 +256,7 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
                     <div>
                       <p className="text-xs text-green-700">Ganancia estimada (80%)</p>
                       <p className="text-2xl font-bold text-green-900">
-                        ${Math.round(trip.estimated_fare * 0.8)}
+                        ${calculateDriverEarnings(trip.estimated_fare)}
                       </p>
                     </div>
                   </div>
