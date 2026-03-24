@@ -5,6 +5,7 @@ import { Card } from '../../components/Card';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Database } from '../../lib/database.types';
+import { canPassengerCancel } from '../../lib/tripStates';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type DriverRow = Database['public']['Tables']['drivers']['Row'];
@@ -99,13 +100,21 @@ export function ActiveRide({ onBack, tripId }: ActiveRideProps) {
   const handleCancelTrip = async () => {
     if (!trip || cancelling) return;
 
+    if (!canPassengerCancel(trip.status)) {
+      alert('No podés cancelar el viaje en este momento');
+      return;
+    }
+
     if (!confirm('¿Estás seguro que querés cancelar este viaje?')) return;
 
     setCancelling(true);
     try {
       const { error } = await supabase
         .from('trips')
-        .update({ status: 'CANCELLED_BY_PASSENGER' })
+        .update({
+          status: 'CANCELLED_BY_PASSENGER',
+          cancelled_at: new Date().toISOString(),
+        })
         .eq('id', trip.id);
 
       if (error) throw error;
@@ -332,7 +341,9 @@ export function ActiveRide({ onBack, tripId }: ActiveRideProps) {
           <h3 className="text-lg font-semibold mb-4">Línea de tiempo</h3>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${trip.requested_at ? 'bg-green-600' : 'bg-gray-300'}`}>
+                {trip.requested_at && <CheckCircle className="w-3 h-3 text-white" />}
+              </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">Viaje solicitado</p>
                 <p className="text-xs text-gray-600">
@@ -341,45 +352,69 @@ export function ActiveRide({ onBack, tripId }: ActiveRideProps) {
               </div>
             </div>
 
-            {trip.accepted_at && (
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Conductor asignado</p>
-                  <p className="text-xs text-gray-600">
-                    {new Date(trip.accepted_at).toLocaleString('es-AR')}
-                  </p>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${trip.accepted_at ? 'bg-green-600' : 'bg-gray-300'}`}>
+                {trip.accepted_at && <CheckCircle className="w-3 h-3 text-white" />}
               </div>
-            )}
+              <div>
+                <p className="text-sm font-medium text-gray-900">Conductor asignado</p>
+                <p className="text-xs text-gray-600">
+                  {trip.accepted_at ? new Date(trip.accepted_at).toLocaleString('es-AR') : 'Esperando...'}
+                </p>
+              </div>
+            </div>
 
-            {trip.driver_arrived_at && (
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Conductor llegó</p>
-                  <p className="text-xs text-gray-600">
-                    {new Date(trip.driver_arrived_at).toLocaleString('es-AR')}
-                  </p>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${trip.status === 'DRIVER_ARRIVING' || trip.status === 'DRIVER_ARRIVED' || trip.started_at ? 'bg-green-600' : 'bg-gray-300'}`}>
+                {(trip.status === 'DRIVER_ARRIVING' || trip.status === 'DRIVER_ARRIVED' || trip.started_at) && <CheckCircle className="w-3 h-3 text-white" />}
               </div>
-            )}
+              <div>
+                <p className="text-sm font-medium text-gray-900">Conductor en camino</p>
+                <p className="text-xs text-gray-600">
+                  {trip.status === 'DRIVER_ARRIVING' || trip.status === 'DRIVER_ARRIVED' || trip.started_at ? 'Confirmado' : 'Pendiente'}
+                </p>
+              </div>
+            </div>
 
-            {trip.started_at && (
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Viaje iniciado</p>
-                  <p className="text-xs text-gray-600">
-                    {new Date(trip.started_at).toLocaleString('es-AR')}
-                  </p>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${trip.driver_arrived_at ? 'bg-green-600' : 'bg-gray-300'}`}>
+                {trip.driver_arrived_at && <CheckCircle className="w-3 h-3 text-white" />}
               </div>
-            )}
+              <div>
+                <p className="text-sm font-medium text-gray-900">Conductor llegó</p>
+                <p className="text-xs text-gray-600">
+                  {trip.driver_arrived_at ? new Date(trip.driver_arrived_at).toLocaleString('es-AR') : 'Pendiente'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${trip.started_at ? 'bg-green-600' : 'bg-gray-300'}`}>
+                {trip.started_at && <CheckCircle className="w-3 h-3 text-white" />}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">Viaje iniciado</p>
+                <p className="text-xs text-gray-600">
+                  {trip.started_at ? new Date(trip.started_at).toLocaleString('es-AR') : 'Pendiente'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${trip.completed_at ? 'bg-green-600' : 'bg-gray-300'}`}>
+                {trip.completed_at && <CheckCircle className="w-3 h-3 text-white" />}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">Viaje completado</p>
+                <p className="text-xs text-gray-600">
+                  {trip.completed_at ? new Date(trip.completed_at).toLocaleString('es-AR') : 'Pendiente'}
+                </p>
+              </div>
+            </div>
           </div>
         </Card>
 
-        {trip.status === 'REQUESTED' && (
+        {canPassengerCancel(trip.status) && (
           <Button
             variant="outline"
             onClick={handleCancelTrip}
@@ -388,6 +423,17 @@ export function ActiveRide({ onBack, tripId }: ActiveRideProps) {
           >
             {cancelling ? 'Cancelando...' : 'Cancelar viaje'}
           </Button>
+        )}
+
+        {trip.status === 'COMPLETED' && (
+          <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6 text-center">
+            <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-green-900 mb-2">¡Viaje completado!</h3>
+            <p className="text-green-700 mb-4">Esperamos que hayas tenido un buen viaje</p>
+            <Button variant="primary" onClick={onBack} fullWidth>
+              Calificar conductor
+            </Button>
+          </div>
         )}
       </div>
     </div>
