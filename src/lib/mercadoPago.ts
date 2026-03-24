@@ -26,16 +26,16 @@ export async function createPaymentPreference(
   params: CreatePaymentPreferenceParams
 ): Promise<MercadoPagoPreference> {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const { data: { session } } = await supabase.auth.getSession();
 
-  if (!supabaseUrl || !supabaseKey) {
+  if (!supabaseUrl || !session?.access_token) {
     throw new Error('Configuración de Supabase no encontrada');
   }
 
   const response = await fetch(`${supabaseUrl}/functions/v1/create-payment-preference`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${supabaseKey}`,
+      'Authorization': `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(params),

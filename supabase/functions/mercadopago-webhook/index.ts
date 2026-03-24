@@ -28,6 +28,17 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const webhookSecret = Deno.env.get('MP_WEBHOOK_SECRET');
+    const signature = req.headers.get('x-signature');
+    if (webhookSecret) {
+      if (!signature || !signature.includes(`ts=`) || !signature.includes(`v1=`)) {
+        return new Response(JSON.stringify({ error: true, message: 'Firma inválida' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 

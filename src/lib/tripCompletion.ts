@@ -19,7 +19,7 @@ export async function calculateTripCompletion(
   const startTime = trip.started_at ? new Date(trip.started_at) : new Date(trip.accepted_at);
   const actualDurationMinutes = Math.floor((Date.now() - startTime.getTime()) / 60000);
 
-  const pricingConfig = getPricingConfig();
+  const pricingConfig = await getPricingConfig();
   const finalFare = calculateFare(actualDistanceKm, pricingConfig);
 
   const driverEarnings = calculateDriverEarnings(finalFare);
@@ -41,67 +41,16 @@ export async function completeTripTransaction(
   completionData: TripCompletionData
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error: tripError } = await supabase
-      .from('trips')
-      .update({
-        status: 'COMPLETED',
-        completed_at: new Date().toISOString(),
-        actual_distance_km: completionData.actualDistanceKm,
-        actual_duration_minutes: completionData.actualDurationMinutes,
-        final_fare: completionData.finalFare,
-      })
-      .eq('id', tripId)
-      .eq('status', 'IN_PROGRESS');
-
-    if (tripError) {
-      throw new Error(`Error actualizando viaje: ${tripError.message}`);
-    }
-
-    const { data: driverData, error: driverFetchError } = await supabase
-      .from('drivers')
-      .select('total_trips, total_earnings')
-      .eq('id', driverId)
-      .maybeSingle();
-
-    if (driverFetchError) {
-      throw new Error(`Error obteniendo datos del conductor: ${driverFetchError.message}`);
-    }
-
-    const { error: driverUpdateError } = await supabase
-      .from('drivers')
-      .update({
-        is_on_trip: false,
-        total_trips: (driverData?.total_trips || 0) + 1,
-        total_earnings: (driverData?.total_earnings || 0) + completionData.driverEarnings,
-      })
-      .eq('id', driverId);
-
-    if (driverUpdateError) {
-      throw new Error(`Error actualizando conductor: ${driverUpdateError.message}`);
-    }
-
-    const { data: passengerData, error: passengerFetchError } = await supabase
-      .from('passengers')
-      .select('total_trips')
-      .eq('id', passengerId)
-      .maybeSingle();
-
-    if (passengerFetchError) {
-      console.warn('Error obteniendo datos del pasajero:', passengerFetchError);
-    }
-
-    if (passengerData) {
-      const { error: passengerUpdateError } = await supabase
-        .from('passengers')
-        .update({
-          total_trips: passengerData.total_trips + 1,
-        })
-        .eq('id', passengerId);
-
-      if (passengerUpdateError) {
-        console.warn('Error actualizando pasajero:', passengerUpdateError);
-      }
-    }
+    const { data: completionResult, error: completionError } = await supabase.rpc('complete_trip_counters_atomic', {
+      p_trip_id: tripId,
+      p_driver_id: driverId,
+      p_passenger_id: passengerId,
+      p_actual_distance_km: completionData.actualDistanceKm,
+      p_actual_duration_minutes: completionData.actualDurationMinutes,
+      p_final_fare: completionData.finalFare,
+    });
+    if (completionError) throw new Error(`Error actualizando contadores: ${completionError.message}`);
+    if (!completionResult) throw new Error('El viaje no se pudo cerrar en forma atómica');
 
     return { success: true };
   } catch (error) {

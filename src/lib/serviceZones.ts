@@ -20,7 +20,8 @@ export async function isPointInServiceZone(
     if (error) throw error;
 
     if (!zones || zones.length === 0) {
-      return { inZone: true };
+      console.warn('No hay zonas activas configuradas; denegando solicitud por seguridad.');
+      return { inZone: false };
     }
 
     for (const zone of zones) {
@@ -32,7 +33,7 @@ export async function isPointInServiceZone(
     return { inZone: false };
   } catch (error) {
     console.error('Error checking service zone:', error);
-    return { inZone: true };
+    return { inZone: false };
   }
 }
 
