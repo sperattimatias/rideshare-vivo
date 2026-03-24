@@ -22,9 +22,13 @@ export function DriverDashboard() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'dashboard' | 'complete' | 'profile' | 'earnings' | 'support'>('dashboard');
   const [weeklyEarnings, setWeeklyEarnings] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     fetchDriverData();
+    fetchUnreadMessages();
+    const interval = setInterval(fetchUnreadMessages, 10000);
+    return () => clearInterval(interval);
   }, [profile]);
 
   useEffect(() => {
@@ -32,6 +36,36 @@ export function DriverDashboard() {
       fetchWeeklyEarnings();
     }
   }, [driver]);
+
+  const fetchUnreadMessages = async () => {
+    if (!profile) return;
+
+    try {
+      const { data: conversations } = await supabase
+        .from('support_conversations')
+        .select('id')
+        .eq('user_id', profile.id)
+        .in('status', ['OPEN', 'IN_PROGRESS', 'WAITING_RESPONSE']);
+
+      if (!conversations || conversations.length === 0) {
+        setUnreadMessages(0);
+        return;
+      }
+
+      const conversationIds = conversations.map((c) => c.id);
+
+      const { count } = await supabase
+        .from('support_conversation_messages')
+        .select('*', { count: 'exact', head: true })
+        .in('conversation_id', conversationIds)
+        .neq('sender_id', profile.id)
+        .is('read_at', null);
+
+      setUnreadMessages(count || 0);
+    } catch (error) {
+      console.error('Error fetching unread messages:', error);
+    }
+  };
 
   const fetchDriverData = async () => {
     if (!profile) return;
@@ -143,10 +177,15 @@ export function DriverDashboard() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setView('support')}
-              className="flex items-center gap-2 text-gray-700 hover:text-green-600 transition-colors"
+              className="relative flex items-center gap-2 text-gray-700 hover:text-green-600 transition-colors"
             >
               <MessageCircle className="w-5 h-5" />
               <span className="hidden sm:inline">Soporte</span>
+              {unreadMessages > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                  {unreadMessages > 9 ? '9+' : unreadMessages}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setView('profile')}
