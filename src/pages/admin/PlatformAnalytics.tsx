@@ -94,7 +94,7 @@ export function PlatformAnalytics({ onBack }: PlatformAnalyticsProps) {
 
       const activeDrivers =
         drivers?.filter(
-          (d) => d.is_available && d.verification_status === 'APPROVED'
+          (d) => d.is_online && d.status === 'ACTIVE'
         ).length || 0;
 
       const averageRating =

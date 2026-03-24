@@ -19,7 +19,7 @@ interface DriverVerificationProps {
 export function DriverVerification({ onBack }: DriverVerificationProps) {
   const [drivers, setDrivers] = useState<DriverWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
+  const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'suspended' | 'all'>('pending');
   const [selectedDriver, setSelectedDriver] = useState<DriverWithProfile | null>(null);
   const [processing, setProcessing] = useState(false);
 
@@ -39,11 +39,13 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
         .order('created_at', { ascending: false });
 
       if (filter === 'pending') {
-        query = query.eq('verification_status', 'PENDING');
+        query = query.eq('status', 'PENDING_APPROVAL');
       } else if (filter === 'approved') {
-        query = query.eq('verification_status', 'APPROVED');
+        query = query.eq('status', 'ACTIVE');
       } else if (filter === 'rejected') {
-        query = query.eq('verification_status', 'REJECTED');
+        query = query.eq('status', 'REJECTED');
+      } else if (filter === 'suspended') {
+        query = query.eq('status', 'SUSPENDED');
       }
 
       const { data, error } = await query;
@@ -58,21 +60,22 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
   };
 
   const handleApprove = async (driverId: string) => {
-    if (!confirm('¿Estás seguro de aprobar este conductor?')) return;
+    if (!confirm('¿Estás seguro de aprobar este conductor? Esto le permitirá operar una vez que vincule Mercado Pago.')) return;
 
     setProcessing(true);
     try {
       const { error } = await supabase
         .from('drivers')
         .update({
-          verification_status: 'APPROVED',
-          verified_at: new Date().toISOString(),
+          status: 'ACTIVE',
+          documents_validated: true,
+          documents_validated_at: new Date().toISOString(),
         })
         .eq('id', driverId);
 
       if (error) throw error;
 
-      alert('Conductor aprobado exitosamente');
+      alert('Conductor aprobado exitosamente. Podrá recibir viajes una vez que vincule su cuenta de Mercado Pago.');
       setSelectedDriver(null);
       fetchDrivers();
     } catch (error) {
@@ -92,7 +95,7 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
       const { error } = await supabase
         .from('drivers')
         .update({
-          verification_status: 'REJECTED',
+          status: 'REJECTED',
           rejection_reason: reason || null,
         })
         .eq('id', driverId);
@@ -110,12 +113,66 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
     }
   };
 
+  const handleSuspend = async (driverId: string) => {
+    const reason = prompt('Motivo de la suspensión (opcional):');
+    if (reason === null) return;
+
+    setProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('drivers')
+        .update({
+          status: 'SUSPENDED',
+          is_online: false,
+          rejection_reason: reason || null,
+        })
+        .eq('id', driverId);
+
+      if (error) throw error;
+
+      alert('Conductor suspendido exitosamente');
+      setSelectedDriver(null);
+      fetchDrivers();
+    } catch (error) {
+      console.error('Error suspending driver:', error);
+      alert('Error al suspender conductor');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleReactivate = async (driverId: string) => {
+    if (!confirm('¿Estás seguro de reactivar este conductor?')) return;
+
+    setProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('drivers')
+        .update({
+          status: 'ACTIVE',
+          rejection_reason: null,
+        })
+        .eq('id', driverId);
+
+      if (error) throw error;
+
+      alert('Conductor reactivado exitosamente');
+      setSelectedDriver(null);
+      fetchDrivers();
+    } catch (error) {
+      console.error('Error reactivating driver:', error);
+      alert('Error al reactivar conductor');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
-    if (status === 'APPROVED') {
+    if (status === 'ACTIVE') {
       return (
         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
           <CheckCircle className="w-3 h-3" />
-          Aprobado
+          Activo
         </span>
       );
     } else if (status === 'REJECTED') {
@@ -125,11 +182,25 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
           Rechazado
         </span>
       );
+    } else if (status === 'SUSPENDED') {
+      return (
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+          <AlertCircle className="w-3 h-3" />
+          Suspendido
+        </span>
+      );
+    } else if (status === 'INACTIVE') {
+      return (
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          <AlertCircle className="w-3 h-3" />
+          Inactivo
+        </span>
+      );
     } else {
       return (
         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
           <AlertCircle className="w-3 h-3" />
-          Pendiente
+          Pendiente de aprobación
         </span>
       );
     }
@@ -156,7 +227,7 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-3xl font-bold text-gray-900">Verificación de Conductor</h1>
-              {getStatusBadge(selectedDriver.verification_status)}
+              {getStatusBadge(selectedDriver.status)}
             </div>
           </div>
 
@@ -344,7 +415,7 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
             </Card>
           )}
 
-          {selectedDriver.verification_status === 'PENDING' && (
+          {selectedDriver.status === 'PENDING_APPROVAL' && (
             <div className="flex gap-4">
               <Button
                 variant="outline"
@@ -363,6 +434,34 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 {processing ? 'Procesando...' : 'Aprobar Conductor'}
+              </Button>
+            </div>
+          )}
+
+          {selectedDriver.status === 'ACTIVE' && (
+            <div className="flex gap-4">
+              <Button
+                variant="outline"
+                onClick={() => handleSuspend(selectedDriver.id)}
+                disabled={processing}
+                fullWidth
+              >
+                <AlertCircle className="w-4 h-4 mr-2" />
+                {processing ? 'Procesando...' : 'Suspender Conductor'}
+              </Button>
+            </div>
+          )}
+
+          {(selectedDriver.status === 'SUSPENDED' || selectedDriver.status === 'REJECTED') && (
+            <div className="flex gap-4">
+              <Button
+                variant="primary"
+                onClick={() => handleReactivate(selectedDriver.id)}
+                disabled={processing}
+                fullWidth
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                {processing ? 'Procesando...' : 'Reactivar Conductor'}
               </Button>
             </div>
           )}
@@ -391,7 +490,7 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
           <p className="text-gray-600">Revisar y aprobar solicitudes de nuevos conductores</p>
         </div>
 
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
           <Button
             variant={filter === 'pending' ? 'primary' : 'outline'}
             size="sm"
@@ -404,7 +503,14 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
             size="sm"
             onClick={() => setFilter('approved')}
           >
-            Aprobados
+            Activos
+          </Button>
+          <Button
+            variant={filter === 'suspended' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setFilter('suspended')}
+          >
+            Suspendidos
           </Button>
           <Button
             variant={filter === 'rejected' ? 'primary' : 'outline'}
@@ -437,7 +543,8 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
             </h2>
             <p className="text-gray-600">
               {filter === 'pending' && 'No hay solicitudes pendientes de revisión'}
-              {filter === 'approved' && 'No hay conductores aprobados todavía'}
+              {filter === 'approved' && 'No hay conductores activos todavía'}
+              {filter === 'suspended' && 'No hay conductores suspendidos'}
               {filter === 'rejected' && 'No hay conductores rechazados'}
               {filter === 'all' && 'No hay conductores registrados en el sistema'}
             </p>
@@ -471,7 +578,7 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
                         <h3 className="text-lg font-semibold text-gray-900">
                           {profile?.full_name}
                         </h3>
-                        {getStatusBadge(driver.verification_status)}
+                        {getStatusBadge(driver.status)}
                       </div>
 
                       <div className="grid md:grid-cols-3 gap-4 text-sm">

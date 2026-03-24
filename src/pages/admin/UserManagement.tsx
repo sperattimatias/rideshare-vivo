@@ -229,7 +229,7 @@ export function UserManagement({ onBack }: UserManagementProps) {
                 <div>
                   <p className="text-sm text-gray-600">Estado de verificación</p>
                   <p className="font-medium text-gray-900">
-                    {selectedUser.driver.verification_status}
+                    {selectedUser.driver.status}
                   </p>
                 </div>
                 <div>
