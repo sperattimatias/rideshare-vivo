@@ -73,7 +73,7 @@ export function CompleteProfile({ onBack, onComplete }: CompleteProfileProps) {
 
       if (vehiclePhoto) {
         const fileExt = vehiclePhoto.name.split('.').pop();
-        const fileName = `${user?.id}-vehicle-${Date.now()}.${fileExt}`;
+        const fileName = `${user?.id}/vehicle-${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from('driver-documents')
@@ -122,7 +122,7 @@ export function CompleteProfile({ onBack, onComplete }: CompleteProfileProps) {
 
       if (licensePhoto) {
         const fileExt = licensePhoto.name.split('.').pop();
-        const fileName = `${user?.id}-license-${Date.now()}.${fileExt}`;
+        const fileName = `${user?.id}/license-${Date.now()}.${fileExt}`;
         const { error: uploadError } = await supabase.storage
           .from('driver-documents')
           .upload(fileName, licensePhoto);
@@ -135,7 +135,7 @@ export function CompleteProfile({ onBack, onComplete }: CompleteProfileProps) {
 
       if (registrationPhoto) {
         const fileExt = registrationPhoto.name.split('.').pop();
-        const fileName = `${user?.id}-registration-${Date.now()}.${fileExt}`;
+        const fileName = `${user?.id}/registration-${Date.now()}.${fileExt}`;
         const { error: uploadError } = await supabase.storage
           .from('driver-documents')
           .upload(fileName, registrationPhoto);
@@ -148,7 +148,7 @@ export function CompleteProfile({ onBack, onComplete }: CompleteProfileProps) {
 
       if (insurancePhoto) {
         const fileExt = insurancePhoto.name.split('.').pop();
-        const fileName = `${user?.id}-insurance-${Date.now()}.${fileExt}`;
+        const fileName = `${user?.id}/insurance-${Date.now()}.${fileExt}`;
         const { error: uploadError } = await supabase.storage
           .from('driver-documents')
           .upload(fileName, insurancePhoto);
