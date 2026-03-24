@@ -4,6 +4,7 @@ import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
+import { calculateDriverEarnings } from '../../lib/pricing';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 
@@ -59,7 +60,7 @@ export function Earnings({ driverId, onBack }: EarningsProps) {
       };
 
       data.forEach((trip) => {
-        const driverEarning = trip.final_fare ? Math.round(trip.final_fare * 0.8) : 0;
+        const driverEarning = trip.final_fare ? calculateDriverEarnings(trip.final_fare) : 0;
         const tripDate = new Date(trip.completed_at || trip.requested_at);
 
         earningsData.total += driverEarning;
@@ -122,7 +123,7 @@ export function Earnings({ driverId, onBack }: EarningsProps) {
 
   const filteredTrips = getFilteredTrips();
   const totalEarnings = filteredTrips.reduce(
-    (sum, trip) => sum + (trip.final_fare ? Math.round(trip.final_fare * 0.8) : 0),
+    (sum, trip) => sum + (trip.final_fare ? calculateDriverEarnings(trip.final_fare) : 0),
     0
   );
 
@@ -241,7 +242,7 @@ export function Earnings({ driverId, onBack }: EarningsProps) {
           ) : (
             <div className="space-y-3">
               {filteredTrips.map((trip) => {
-                const driverEarning = trip.final_fare ? Math.round(trip.final_fare * 0.8) : 0;
+                const driverEarning = trip.final_fare ? calculateDriverEarnings(trip.final_fare) : 0;
                 const platformFee = trip.final_fare
                   ? trip.final_fare - driverEarning
                   : 0;

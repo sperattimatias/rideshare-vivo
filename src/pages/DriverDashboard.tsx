@@ -11,6 +11,7 @@ import { TripRequests } from './driver/TripRequests';
 import { ActiveTrip } from './driver/ActiveTrip';
 import { Earnings } from './driver/Earnings';
 import type { Database } from '../lib/database.types';
+import { calculateDriverEarnings } from '../lib/pricing';
 
 type DriverRow = Database['public']['Tables']['drivers']['Row'];
 
@@ -67,7 +68,7 @@ export function DriverDashboard() {
       if (error) throw error;
 
       const total = data.reduce(
-        (sum, trip) => sum + (trip.final_fare ? Math.round(trip.final_fare * 0.8) : 0),
+        (sum, trip) => sum + (trip.final_fare ? calculateDriverEarnings(trip.final_fare) : 0),
         0
       );
 

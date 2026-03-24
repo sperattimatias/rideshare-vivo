@@ -339,7 +339,7 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
                 <div>
                   <p className="text-sm text-green-700">Tu ganancia estimada (80%)</p>
                   <p className="text-2xl font-bold text-green-900">
-                    ${Math.round(trip.estimated_fare * 0.8)}
+                    ${calculateDriverEarnings(trip.estimated_fare)}
                   </p>
                 </div>
                 <DollarSign className="w-10 h-10 text-green-600" />
