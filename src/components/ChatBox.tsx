@@ -81,11 +81,15 @@ export function ChatBox({
         .eq('id', conversationId)
         .single();
 
-      if (conversation?.user_profiles) {
+      const assignedProfile = Array.isArray(conversation?.user_profiles)
+        ? conversation.user_profiles[0]
+        : conversation?.user_profiles;
+
+      if (assignedProfile) {
         setAgent({
-          id: conversation.user_profiles.id,
-          full_name: conversation.user_profiles.full_name,
-          role: conversation.user_profiles.role || 'Agente de Soporte',
+          id: assignedProfile.id,
+          full_name: assignedProfile.full_name,
+          role: assignedProfile.role || 'Agente de Soporte',
         });
       }
     } catch (error) {
