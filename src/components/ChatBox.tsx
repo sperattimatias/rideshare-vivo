@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Paperclip, AlertCircle, Clock, User as UserIcon, CheckCheck, Headphones, Zap } from 'lucide-react';
+import { Send, Paperclip, AlertCircle, Clock, CheckCheck, Headphones, Zap } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Button } from './Button';
-import { Input } from './Input';
 
 interface Message {
   id: string;
@@ -41,12 +40,11 @@ export function ChatBox({
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
-  const [agentTyping, setAgentTyping] = useState(false);
+  const [agentTyping] = useState(false);
   const [agent, setAgent] = useState<AgentInfo | null>(null);
-  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [, setHasUnreadMessages] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     fetchConversationInfo();

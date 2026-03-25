@@ -450,7 +450,7 @@ export async function aggregateTripDemand(date?: string): Promise<void> {
       hourlyData.get(hour)!.push(trip);
     });
 
-    for (const [hour, hourTrips] of hourlyData) {
+    for (const [, hourTrips] of hourlyData) {
       const avgWait =
         hourTrips
           .filter((t) => t.accepted_at)

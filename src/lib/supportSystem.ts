@@ -179,12 +179,6 @@ export async function escalateConversation(
     .eq('id', conversationId)
     .single();
 
-  const chatDuration = conversation?.chat_started_at
-    ? Math.floor(
-        (new Date().getTime() - new Date(conversation.chat_started_at).getTime()) / 60000
-      )
-    : 0;
-
   await supabase
     .from('support_conversations')
     .update({
