@@ -1,10 +1,28 @@
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { Welcome } from './pages/Welcome';
-import { PassengerDashboard } from './pages/PassengerDashboard';
-import { DriverDashboard } from './pages/DriverDashboard';
-import { AdminDashboard } from './pages/AdminDashboard';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { supabase } from './lib/supabase';
+
+const Welcome = lazy(() => import('./pages/Welcome').then((m) => ({ default: m.Welcome })));
+const PassengerDashboard = lazy(() =>
+  import('./pages/PassengerDashboard').then((m) => ({ default: m.PassengerDashboard }))
+);
+const DriverDashboard = lazy(() =>
+  import('./pages/DriverDashboard').then((m) => ({ default: m.DriverDashboard }))
+);
+const AdminDashboard = lazy(() =>
+  import('./pages/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
+);
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600">Cargando...</p>
+      </div>
+    </div>
+  );
+}
 
 function AppContent() {
   const { loading, profile, user } = useAuth();
@@ -40,34 +58,47 @@ function AppContent() {
   };
 
   if (loading || checkingAdmin) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!profile) {
-    return <Welcome />;
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <Welcome />
+      </Suspense>
+    );
   }
 
   if (isAdmin) {
-    return <AdminDashboard />;
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <AdminDashboard />
+      </Suspense>
+    );
   }
 
   if (profile.user_type === 'PASSENGER') {
-    return <PassengerDashboard />;
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <PassengerDashboard />
+      </Suspense>
+    );
   }
 
   if (profile.user_type === 'DRIVER') {
-    return <DriverDashboard />;
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <DriverDashboard />
+      </Suspense>
+    );
   }
 
   if (profile.user_type === 'ADMIN') {
-    return <AdminDashboard />;
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <AdminDashboard />
+      </Suspense>
+    );
   }
 
   return (

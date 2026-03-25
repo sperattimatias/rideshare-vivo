@@ -16,10 +16,11 @@ export async function calculateTripCompletion(
   trip: TripRow,
   actualDistanceKm: number
 ): Promise<TripCompletionData> {
-  const startTime = trip.started_at ? new Date(trip.started_at) : new Date(trip.accepted_at);
+  const startTimestamp = trip.started_at || trip.accepted_at || trip.requested_at;
+  const startTime = new Date(startTimestamp);
   const actualDurationMinutes = Math.floor((Date.now() - startTime.getTime()) / 60000);
 
-  const pricingConfig = getPricingConfig();
+  const pricingConfig = await getPricingConfig();
   const finalFare = calculateFare(actualDistanceKm, pricingConfig);
 
   const driverEarnings = calculateDriverEarnings(finalFare);
@@ -41,7 +42,7 @@ export async function completeTripTransaction(
   completionData: TripCompletionData
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error: tripError } = await supabase
+    const { data: updatedTrip, error: tripError } = await supabase
       .from('trips')
       .update({
         status: 'COMPLETED',
@@ -51,10 +52,18 @@ export async function completeTripTransaction(
         final_fare: completionData.finalFare,
       })
       .eq('id', tripId)
-      .eq('status', 'IN_PROGRESS');
+      .eq('status', 'IN_PROGRESS')
+      .select('id')
+      .maybeSingle();
 
     if (tripError) {
       throw new Error(`Error actualizando viaje: ${tripError.message}`);
+    }
+    if (!updatedTrip) {
+      return {
+        success: false,
+        error: 'El viaje ya fue finalizado o no está en estado IN_PROGRESS',
+      };
     }
 
     const { data: driverData, error: driverFetchError } = await supabase

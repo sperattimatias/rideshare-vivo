@@ -44,6 +44,7 @@ export interface Database {
           user_id: string
           preferred_payment_method: string | null
           saved_addresses: Json
+          trust_mode_enabled: boolean
           total_trips: number
           created_at: string
           updated_at: string
@@ -53,6 +54,7 @@ export interface Database {
           user_id: string
           preferred_payment_method?: string | null
           saved_addresses?: Json
+          trust_mode_enabled?: boolean
           total_trips?: number
           created_at?: string
           updated_at?: string
@@ -62,6 +64,7 @@ export interface Database {
           user_id?: string
           preferred_payment_method?: string | null
           saved_addresses?: Json
+          trust_mode_enabled?: boolean
           total_trips?: number
           created_at?: string
           updated_at?: string
@@ -99,10 +102,13 @@ export interface Database {
           current_location: string | null
           last_location_update: string | null
           can_receive_trips: boolean
+          total_earnings: number
           created_at: string
           updated_at: string
           approved_at: string | null
           approved_by: string | null
+          mp_oauth_status: 'PENDING' | 'AUTHORIZED' | 'EXPIRED' | 'REVOKED'
+          mp_oauth_connected_at: string | null
         }
         Insert: {
           id?: string
@@ -134,10 +140,14 @@ export interface Database {
           is_on_trip?: boolean
           current_location?: string | null
           last_location_update?: string | null
+          can_receive_trips?: boolean
+          total_earnings?: number
           created_at?: string
           updated_at?: string
           approved_at?: string | null
           approved_by?: string | null
+          mp_oauth_status?: 'PENDING' | 'AUTHORIZED' | 'EXPIRED' | 'REVOKED'
+          mp_oauth_connected_at?: string | null
         }
         Update: {
           id?: string
@@ -169,10 +179,14 @@ export interface Database {
           is_on_trip?: boolean
           current_location?: string | null
           last_location_update?: string | null
+          can_receive_trips?: boolean
+          total_earnings?: number
           created_at?: string
           updated_at?: string
           approved_at?: string | null
           approved_by?: string | null
+          mp_oauth_status?: 'PENDING' | 'AUTHORIZED' | 'EXPIRED' | 'REVOKED'
+          mp_oauth_connected_at?: string | null
         }
       }
       trips: {
@@ -182,8 +196,12 @@ export interface Database {
           driver_id: string | null
           origin_address: string
           origin_location: string
+          origin_latitude: number | null
+          origin_longitude: number | null
           destination_address: string
           destination_location: string
+          destination_latitude: number | null
+          destination_longitude: number | null
           status: 'REQUESTED' | 'ACCEPTED' | 'DRIVER_ARRIVING' | 'DRIVER_ARRIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED_BY_PASSENGER' | 'CANCELLED_BY_DRIVER' | 'CANCELLED_BY_SYSTEM'
           estimated_distance_km: number | null
           estimated_duration_minutes: number | null
@@ -200,6 +218,10 @@ export interface Database {
           cancelled_at: string | null
           cancellation_reason: string | null
           rating_id: string | null
+          cancelled_by_admin_id: string | null
+          admin_notes: string | null
+          matching_score: number | null
+          wait_time_seconds: number | null
           created_at: string
           updated_at: string
         }
@@ -209,8 +231,12 @@ export interface Database {
           driver_id?: string | null
           origin_address: string
           origin_location: string
+          origin_latitude?: number | null
+          origin_longitude?: number | null
           destination_address: string
           destination_location: string
+          destination_latitude?: number | null
+          destination_longitude?: number | null
           status?: 'REQUESTED' | 'ACCEPTED' | 'DRIVER_ARRIVING' | 'DRIVER_ARRIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED_BY_PASSENGER' | 'CANCELLED_BY_DRIVER' | 'CANCELLED_BY_SYSTEM'
           estimated_distance_km?: number | null
           estimated_duration_minutes?: number | null
@@ -227,6 +253,10 @@ export interface Database {
           cancelled_at?: string | null
           cancellation_reason?: string | null
           rating_id?: string | null
+          cancelled_by_admin_id?: string | null
+          admin_notes?: string | null
+          matching_score?: number | null
+          wait_time_seconds?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -236,8 +266,12 @@ export interface Database {
           driver_id?: string | null
           origin_address?: string
           origin_location?: string
+          origin_latitude?: number | null
+          origin_longitude?: number | null
           destination_address?: string
           destination_location?: string
+          destination_latitude?: number | null
+          destination_longitude?: number | null
           status?: 'REQUESTED' | 'ACCEPTED' | 'DRIVER_ARRIVING' | 'DRIVER_ARRIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED_BY_PASSENGER' | 'CANCELLED_BY_DRIVER' | 'CANCELLED_BY_SYSTEM'
           estimated_distance_km?: number | null
           estimated_duration_minutes?: number | null
@@ -254,8 +288,728 @@ export interface Database {
           cancelled_at?: string | null
           cancellation_reason?: string | null
           rating_id?: string | null
+          cancelled_by_admin_id?: string | null
+          admin_notes?: string | null
+          matching_score?: number | null
+          wait_time_seconds?: number | null
           created_at?: string
           updated_at?: string
+        }
+      }
+      admin_users: {
+        Row: {
+          id: string
+          user_id: string
+          role: 'SUPER_ADMIN' | 'OPERATIONS_ADMIN' | 'SUPPORT_ADMIN' | 'FINANCE_ADMIN'
+          permissions: Json
+          is_active: boolean
+          last_login: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          role?: 'SUPER_ADMIN' | 'OPERATIONS_ADMIN' | 'SUPPORT_ADMIN' | 'FINANCE_ADMIN'
+          permissions?: Json
+          is_active?: boolean
+          last_login?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          role?: 'SUPER_ADMIN' | 'OPERATIONS_ADMIN' | 'SUPPORT_ADMIN' | 'FINANCE_ADMIN'
+          permissions?: Json
+          is_active?: boolean
+          last_login?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      incidents: {
+        Row: {
+          id: string
+          reported_by_user_id: string
+          assigned_to_admin_id: string | null
+          incident_type: string
+          severity: string
+          status: string
+          title: string
+          description: string
+          trip_id: string | null
+          driver_id: string | null
+          passenger_id: string | null
+          metadata: Json | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          reported_by_user_id: string
+          assigned_to_admin_id?: string | null
+          incident_type: string
+          severity?: string
+          status?: string
+          title: string
+          description: string
+          trip_id?: string | null
+          driver_id?: string | null
+          passenger_id?: string | null
+          metadata?: Json | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          reported_by_user_id?: string
+          assigned_to_admin_id?: string | null
+          incident_type?: string
+          severity?: string
+          status?: string
+          title?: string
+          description?: string
+          trip_id?: string | null
+          driver_id?: string | null
+          passenger_id?: string | null
+          metadata?: Json | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      incident_actions: {
+        Row: {
+          id: string
+          incident_id: string
+          admin_id: string
+          action_type: string
+          notes: string | null
+          action_data: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          incident_id: string
+          admin_id: string
+          action_type: string
+          notes?: string | null
+          action_data?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          incident_id?: string
+          admin_id?: string
+          action_type?: string
+          notes?: string | null
+          action_data?: Json | null
+          created_at?: string
+        }
+      }
+      audit_logs: {
+        Row: {
+          id: string
+          admin_id: string
+          action: string
+          entity_type: string
+          entity_id: string | null
+          old_values: Json | null
+          new_values: Json | null
+          metadata: Json | null
+          ip_address: string | null
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          admin_id: string
+          action: string
+          entity_type: string
+          entity_id?: string | null
+          old_values?: Json | null
+          new_values?: Json | null
+          metadata?: Json | null
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          admin_id?: string
+          action?: string
+          entity_type?: string
+          entity_id?: string | null
+          old_values?: Json | null
+          new_values?: Json | null
+          metadata?: Json | null
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+      }
+      driver_verification_history: {
+        Row: {
+          id: string
+          driver_id: string
+          admin_id: string
+          action: string
+          previous_status: string | null
+          new_status: string
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          driver_id: string
+          admin_id: string
+          action: string
+          previous_status?: string | null
+          new_status: string
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          driver_id?: string
+          admin_id?: string
+          action?: string
+          previous_status?: string | null
+          new_status?: string
+          notes?: string | null
+          created_at?: string
+        }
+      }
+      driver_scores: {
+        Row: {
+          id: string
+          driver_id: string
+          score: number
+          metrics: Json
+          calculated_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          driver_id: string
+          score?: number
+          metrics?: Json
+          calculated_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          driver_id?: string
+          score?: number
+          metrics?: Json
+          calculated_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      matching_config: {
+        Row: {
+          id: string
+          city: string
+          max_search_radius_km: number
+          max_wait_time_seconds: number
+          score_weights: Json
+          trust_mode_bonus: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          city?: string
+          max_search_radius_km?: number
+          max_wait_time_seconds?: number
+          score_weights?: Json
+          trust_mode_bonus?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          city?: string
+          max_search_radius_km?: number
+          max_wait_time_seconds?: number
+          score_weights?: Json
+          trust_mode_bonus?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      trip_demand_analytics: {
+        Row: {
+          id: string
+          zone_name: string
+          demand_level: number
+          active_drivers: number
+          requested_trips: number
+          avg_wait_time_seconds: number
+          timestamp_hour: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          zone_name: string
+          demand_level?: number
+          active_drivers?: number
+          requested_trips?: number
+          avg_wait_time_seconds?: number
+          timestamp_hour?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          zone_name?: string
+          demand_level?: number
+          active_drivers?: number
+          requested_trips?: number
+          avg_wait_time_seconds?: number
+          timestamp_hour?: string
+          created_at?: string
+        }
+      }
+      intelligent_alerts: {
+        Row: {
+          id: string
+          alert_type: string
+          severity: string
+          entity_type: string
+          entity_id: string
+          title: string
+          description: string
+          data: Json | null
+          is_resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          alert_type: string
+          severity?: string
+          entity_type: string
+          entity_id: string
+          title: string
+          description: string
+          data?: Json | null
+          is_resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          alert_type?: string
+          severity?: string
+          entity_type?: string
+          entity_id?: string
+          title?: string
+          description?: string
+          data?: Json | null
+          is_resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          created_at?: string
+        }
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          title: string
+          message: string
+          data: Json | null
+          is_read: boolean
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          title: string
+          message: string
+          data?: Json | null
+          is_read?: boolean
+          read_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          title?: string
+          message?: string
+          data?: Json | null
+          is_read?: boolean
+          read_at?: string | null
+          created_at?: string
+        }
+      }
+      notification_settings: {
+        Row: {
+          id: string
+          user_id: string
+          email_enabled: boolean
+          push_enabled: boolean
+          sms_enabled: boolean
+          trip_updates: boolean
+          promotions: boolean
+          support_messages: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          email_enabled?: boolean
+          push_enabled?: boolean
+          sms_enabled?: boolean
+          trip_updates?: boolean
+          promotions?: boolean
+          support_messages?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          email_enabled?: boolean
+          push_enabled?: boolean
+          sms_enabled?: boolean
+          trip_updates?: boolean
+          promotions?: boolean
+          support_messages?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      service_zones: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          city: string
+          polygon: Json
+          is_active: boolean
+          priority: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          city?: string
+          polygon: Json
+          is_active?: boolean
+          priority?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          city?: string
+          polygon?: Json
+          is_active?: boolean
+          priority?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      system_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          description: string | null
+          category: string
+          is_public: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: Json
+          description?: string | null
+          category?: string
+          is_public?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          description?: string | null
+          category?: string
+          is_public?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      support_departments_new: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          color: string
+          icon: string
+          is_active: boolean
+          avg_response_time_minutes: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          color?: string
+          icon?: string
+          is_active?: boolean
+          avg_response_time_minutes?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          color?: string
+          icon?: string
+          is_active?: boolean
+          avg_response_time_minutes?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      support_categories_new: {
+        Row: {
+          id: string
+          name: string
+          slug: string | null
+          description: string | null
+          department_id: string | null
+          requires_urgent_attention: boolean
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug?: string | null
+          description?: string | null
+          department_id?: string | null
+          requires_urgent_attention?: boolean
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string | null
+          description?: string | null
+          department_id?: string | null
+          requires_urgent_attention?: boolean
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      support_conversations: {
+        Row: {
+          id: string
+          conversation_number: string
+          user_id: string
+          user_type: 'PASSENGER' | 'DRIVER'
+          category_id: string | null
+          department_id: string | null
+          assigned_agent_id: string | null
+          subject: string
+          description: string | null
+          status: 'OPEN' | 'IN_PROGRESS' | 'WAITING_RESPONSE' | 'RESOLVED' | 'CLOSED'
+          priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT' | 'CRITICAL'
+          channel: 'CHAT' | 'TICKET'
+          escalated_from_chat: boolean
+          chat_started_at: string
+          escalated_at: string | null
+          rating: number | null
+          rating_comment: string | null
+          first_response_at: string | null
+          resolved_at: string | null
+          closed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_number?: string
+          user_id: string
+          user_type: 'PASSENGER' | 'DRIVER'
+          category_id?: string | null
+          department_id?: string | null
+          assigned_agent_id?: string | null
+          subject: string
+          description?: string | null
+          status?: 'OPEN' | 'IN_PROGRESS' | 'WAITING_RESPONSE' | 'RESOLVED' | 'CLOSED'
+          priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT' | 'CRITICAL'
+          channel?: 'CHAT' | 'TICKET'
+          escalated_from_chat?: boolean
+          chat_started_at?: string
+          escalated_at?: string | null
+          rating?: number | null
+          rating_comment?: string | null
+          first_response_at?: string | null
+          resolved_at?: string | null
+          closed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_number?: string
+          user_id?: string
+          user_type?: 'PASSENGER' | 'DRIVER'
+          category_id?: string | null
+          department_id?: string | null
+          assigned_agent_id?: string | null
+          subject?: string
+          description?: string | null
+          status?: 'OPEN' | 'IN_PROGRESS' | 'WAITING_RESPONSE' | 'RESOLVED' | 'CLOSED'
+          priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT' | 'CRITICAL'
+          channel?: 'CHAT' | 'TICKET'
+          escalated_from_chat?: boolean
+          chat_started_at?: string
+          escalated_at?: string | null
+          rating?: number | null
+          rating_comment?: string | null
+          first_response_at?: string | null
+          resolved_at?: string | null
+          closed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      support_conversation_messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          sender_id: string
+          sender_type: 'PASSENGER' | 'DRIVER' | 'ADMIN' | 'SYSTEM'
+          message: string
+          message_type: string
+          is_internal_note: boolean
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          sender_id: string
+          sender_type: 'PASSENGER' | 'DRIVER' | 'ADMIN' | 'SYSTEM'
+          message: string
+          message_type?: string
+          is_internal_note?: boolean
+          read_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          sender_id?: string
+          sender_type?: 'PASSENGER' | 'DRIVER' | 'ADMIN' | 'SYSTEM'
+          message?: string
+          message_type?: string
+          is_internal_note?: boolean
+          read_at?: string | null
+          created_at?: string
+        }
+      }
+      support_assignments: {
+        Row: {
+          id: string
+          conversation_id: string
+          from_agent_id: string | null
+          to_agent_id: string | null
+          from_department_id: string | null
+          to_department_id: string | null
+          reason: string | null
+          assigned_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          from_agent_id?: string | null
+          to_agent_id?: string | null
+          from_department_id?: string | null
+          to_department_id?: string | null
+          reason?: string | null
+          assigned_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          from_agent_id?: string | null
+          to_agent_id?: string | null
+          from_department_id?: string | null
+          to_department_id?: string | null
+          reason?: string | null
+          assigned_by?: string
+          created_at?: string
+        }
+      }
+      trip_locations: {
+        Row: {
+          id: string
+          trip_id: string
+          latitude: number
+          longitude: number
+          heading: number | null
+          speed_kmh: number | null
+          recorded_at: string
+          source: string
+        }
+        Insert: {
+          id?: string
+          trip_id: string
+          latitude: number
+          longitude: number
+          heading?: number | null
+          speed_kmh?: number | null
+          recorded_at?: string
+          source?: string
+        }
+        Update: {
+          id?: string
+          trip_id?: string
+          latitude?: number
+          longitude?: number
+          heading?: number | null
+          speed_kmh?: number | null
+          recorded_at?: string
+          source?: string
         }
       }
       trip_payments: {
@@ -425,10 +1179,51 @@ export interface Database {
       }
     }
     Views: {
-      [_ in never]: never
+      active_trips_operational: {
+        Row: {
+          [key: string]: Json | null
+        }
+      }
+      drivers_status_summary: {
+        Row: {
+          [key: string]: Json | null
+        }
+      }
+      open_incidents_summary: {
+        Row: {
+          [key: string]: Json | null
+        }
+      }
     }
     Functions: {
-      [_ in never]: never
+      calculate_driver_score: {
+        Args: {
+          p_driver_id: string
+        }
+        Returns: Json
+      }
+      check_driver_performance_alerts: {
+        Args: {
+          p_driver_id: string
+        }
+        Returns: Json
+      }
+      mark_all_notifications_as_read: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: number
+      }
+      accept_trip: {
+        Args: {
+          p_trip_id: string
+          p_driver_id: string
+        }
+        Returns: {
+          success: boolean
+          message: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

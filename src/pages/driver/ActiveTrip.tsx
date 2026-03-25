@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { MapPin, User, Phone, Navigation, CheckCircle, Clock, DollarSign, Map } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
@@ -30,12 +30,55 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [useRealMap, setUseRealMap] = useState(false);
+  const locationWatchRef = useRef<number | null>(null);
+
+  const updateDriverLocation = useCallback(async (lat: number, lon: number) => {
+    if (!trip?.driver_id) return;
+    try {
+      await supabase
+        .from('drivers')
+        .update({
+          current_location: JSON.stringify({ lat, lon }),
+          last_location_update: new Date().toISOString(),
+        })
+        .eq('id', trip.driver_id);
+    } catch (err) {
+      console.error('Error actualizando ubicación:', err);
+    }
+  }, [trip?.driver_id]);
 
   useEffect(() => {
     fetchActiveTrip();
     const interval = setInterval(fetchActiveTrip, 5000);
     return () => clearInterval(interval);
   }, [driverId]);
+
+  useEffect(() => {
+    if (!trip || !['DRIVER_ARRIVING', 'DRIVER_ARRIVED', 'IN_PROGRESS'].includes(trip.status)) {
+      if (locationWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(locationWatchRef.current);
+        locationWatchRef.current = null;
+      }
+      return;
+    }
+
+    if (!('geolocation' in navigator)) return;
+
+    locationWatchRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        updateDriverLocation(position.coords.latitude, position.coords.longitude);
+      },
+      (err) => console.error('Error GPS:', err),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
+
+    return () => {
+      if (locationWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(locationWatchRef.current);
+        locationWatchRef.current = null;
+      }
+    };
+  }, [trip?.status, updateDriverLocation]);
 
   const fetchActiveTrip = async () => {
     try {

@@ -13,8 +13,9 @@ export interface SupportDepartment {
 export interface SupportCategory {
   id: string;
   name: string;
+  slug: string | null;
   description: string;
-  department_id: string;
+  department_id: string | null;
   requires_urgent_attention: boolean;
   is_active: boolean;
 }
@@ -177,12 +178,6 @@ export async function escalateConversation(
     .select('department_id, chat_started_at')
     .eq('id', conversationId)
     .single();
-
-  const chatDuration = conversation?.chat_started_at
-    ? Math.floor(
-        (new Date().getTime() - new Date(conversation.chat_started_at).getTime()) / 60000
-      )
-    : 0;
 
   await supabase
     .from('support_conversations')
