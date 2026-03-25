@@ -34,8 +34,8 @@ export function LiveMap({ className = '' }: LiveMapProps) {
   const [center, setCenter] = useState({ lat: -34.6037, lon: -58.3816 });
   const [zoom, setZoom] = useState(12);
   const mapRef = useRef<HTMLDivElement>(null);
-  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
-  const [selectedTrip, setWaitingTrip] = useState<WaitingTrip | null>(null);
+  const [, setSelectedDriver] = useState<Driver | null>(null);
+  const [, setWaitingTrip] = useState<WaitingTrip | null>(null);
 
   useEffect(() => {
     loadMapData();
