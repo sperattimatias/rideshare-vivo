@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Clock, DollarSign, User, Navigation, Phone, CheckCircle, XCircle } from 'lucide-react';
+import { MapPin, Clock, DollarSign, User, Navigation, CheckCircle, XCircle } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { supabase } from '../../lib/supabase';
@@ -323,17 +323,15 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
                 </Button>
               </div>
 
-              {trip.scheduled_for && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-yellow-600" />
-                    <p className="text-sm text-yellow-800">
-                      Viaje programado para:{' '}
-                      {new Date(trip.scheduled_for).toLocaleString('es-AR')}
-                    </p>
-                  </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-gray-600" />
+                  <p className="text-sm text-gray-800">
+                    Solicitud recibida:{' '}
+                    {new Date(trip.requested_at).toLocaleString('es-AR')}
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
           </Card>
         );
