@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, X, Check, CheckCheck, Settings, MessageCircle, Car, CreditCard, AlertCircle, MapPin, Star, Zap } from 'lucide-react';
+import { Bell, X, Check, CheckCheck, MessageCircle, Car, CreditCard, AlertCircle, MapPin, Star, Zap } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { Button } from './Button';
 
 interface Notification {
   id: string;
@@ -39,7 +38,6 @@ export function NotificationCenter({ userId, onNavigate }: NotificationCenterPro
   const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [loading, setLoading] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
