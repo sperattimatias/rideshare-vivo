@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+interface DatabaseGenerated {
   public: {
     Tables: {
       user_profiles: {
@@ -107,6 +107,7 @@ export interface Database {
           updated_at: string
           approved_at: string | null
           approved_by: string | null
+          rejection_reason: string | null
           mp_oauth_status: 'PENDING' | 'AUTHORIZED' | 'EXPIRED' | 'REVOKED'
           mp_oauth_connected_at: string | null
         }
@@ -146,6 +147,7 @@ export interface Database {
           updated_at?: string
           approved_at?: string | null
           approved_by?: string | null
+          rejection_reason?: string | null
           mp_oauth_status?: 'PENDING' | 'AUTHORIZED' | 'EXPIRED' | 'REVOKED'
           mp_oauth_connected_at?: string | null
         }
@@ -185,6 +187,7 @@ export interface Database {
           updated_at?: string
           approved_at?: string | null
           approved_by?: string | null
+          rejection_reason?: string | null
           mp_oauth_status?: 'PENDING' | 'AUTHORIZED' | 'EXPIRED' | 'REVOKED'
           mp_oauth_connected_at?: string | null
         }
@@ -1228,5 +1231,25 @@ export interface Database {
     Enums: {
       [_ in never]: never
     }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
+
+type PublicTables = DatabaseGenerated['public']['Tables'];
+type PublicViews = DatabaseGenerated['public']['Views'];
+
+export type Database = {
+  public: {
+    Tables: {
+      [K in keyof PublicTables]: PublicTables[K] & { Relationships: [] };
+    };
+    Views: {
+      [K in keyof PublicViews]: PublicViews[K] & { Relationships: [] };
+    };
+    Functions: DatabaseGenerated['public']['Functions'];
+    Enums: DatabaseGenerated['public']['Enums'];
+    CompositeTypes: DatabaseGenerated['public']['CompositeTypes'];
+  };
+};
