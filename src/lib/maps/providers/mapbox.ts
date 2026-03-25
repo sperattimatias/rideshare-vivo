@@ -224,6 +224,7 @@ export class MapboxProvider implements MapProvider {
       bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number };
     }
   ): Promise<Suggestion[]> {
+    void options;
     if (!query || query.trim().length < 3) {
       return [];
     }
@@ -303,7 +304,7 @@ export class MapboxProvider implements MapProvider {
   getStaticMapUrl(options: StaticMapOptions): string {
     const { center, zoom = 14, width = 600, height = 400, markers = [], path = [] } = options;
 
-    let overlays: string[] = [];
+    const overlays: string[] = [];
 
     markers.forEach((marker) => {
       const color = marker.color || 'red';
