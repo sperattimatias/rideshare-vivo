@@ -97,13 +97,15 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
       const { data, error } = await supabase
         .rpc('accept_trip', {
           p_trip_id: tripId,
-          p_driver_id: driverId,
         });
 
       if (error) throw error;
 
       const result = data?.[0];
       if (!result?.success) {
+        if (result?.message) {
+          alert(result.message);
+        }
         await fetchTripRequests();
         return;
       }

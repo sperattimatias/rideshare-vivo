@@ -1220,11 +1220,13 @@ interface DatabaseGenerated {
       accept_trip: {
         Args: {
           p_trip_id: string
-          p_driver_id: string
         }
         Returns: {
           success: boolean
+          code: string
           message: string
+          trip_id: string | null
+          driver_id: string | null
         }[]
       }
     }
