@@ -68,11 +68,6 @@ export function RateTrip({ tripId, onBack, onComplete }: RateTripProps) {
       if (error) throw error;
       setTrip(data as TripWithDetails);
 
-      if (data?.passenger_rating) {
-        setRating(data.passenger_rating);
-        setComment(data.passenger_comment || '');
-      }
-
       const { data: existingRating } = await supabase
         .from('ratings')
         .select('rating, comment, categories')
@@ -205,7 +200,7 @@ export function RateTrip({ tripId, onBack, onComplete }: RateTripProps) {
 
   const driver = trip.driver;
   const driverProfile = driver.user_profile;
-  const alreadyRated = categories.length > 0 || (trip.passenger_rating !== null && rating > 0);
+  const alreadyRated = categories.length > 0 || rating > 0;
 
   return (
     <div className="min-h-screen bg-gray-50">

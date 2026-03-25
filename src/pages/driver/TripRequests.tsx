@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Clock, DollarSign, User, Navigation, Phone, CheckCircle, XCircle } from 'lucide-react';
+import { MapPin, Clock, DollarSign, User, Navigation, CheckCircle, XCircle } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { calculateDistanceKm, formatDistance, isValidCoordinate } from '../../lib/geo';
 import { calculateDriverEarnings } from '../../lib/pricing';
+import { fromDbGeographyPoint } from '../../lib/geospatial';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type PassengerRow = Database['public']['Tables']['passengers']['Row'];
@@ -51,13 +52,10 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
       if (error) throw error;
 
       if (data?.current_location) {
-        try {
-          const location = JSON.parse(data.current_location);
-          if (location.lat && location.lon &&
-              isValidCoordinate(location.lat, location.lon)) {
-            setDriverLocation({ lat: location.lat, lon: location.lon });
-          }
-        } catch {
+        const location = fromDbGeographyPoint(data.current_location);
+        if (location && isValidCoordinate(location.lat, location.lon)) {
+          setDriverLocation(location);
+        } else {
           setDriverLocation(null);
         }
       }
@@ -99,13 +97,15 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
       const { data, error } = await supabase
         .rpc('accept_trip', {
           p_trip_id: tripId,
-          p_driver_id: driverId,
         });
 
       if (error) throw error;
 
       const result = data?.[0];
       if (!result?.success) {
+        if (result?.message) {
+          alert(result.message);
+        }
         await fetchTripRequests();
         return;
       }
@@ -323,17 +323,15 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
                 </Button>
               </div>
 
-              {trip.scheduled_for && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-yellow-600" />
-                    <p className="text-sm text-yellow-800">
-                      Viaje programado para:{' '}
-                      {new Date(trip.scheduled_for).toLocaleString('es-AR')}
-                    </p>
-                  </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-gray-600" />
+                  <p className="text-sm text-gray-800">
+                    Solicitud recibida:{' '}
+                    {new Date(trip.requested_at).toLocaleString('es-AR')}
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
           </Card>
         );
