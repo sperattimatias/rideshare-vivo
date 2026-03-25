@@ -106,9 +106,7 @@ export function useNotifications(userId: string | undefined) {
     if (!userId) return;
 
     try {
-      const { error } = await supabase.rpc('mark_all_notifications_as_read', {
-        p_user_id: userId,
-      });
+      const { error } = await supabase.rpc('mark_all_notifications_as_read');
 
       if (error) throw error;
 
