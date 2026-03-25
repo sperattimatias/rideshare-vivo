@@ -3,7 +3,6 @@ import { ArrowLeft, Car } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Card } from '../../components/Card';
-import { STRINGS } from '../../lib/strings';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginProps {

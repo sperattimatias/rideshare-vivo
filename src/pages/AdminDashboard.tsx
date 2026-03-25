@@ -4,7 +4,6 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { DriverVerification } from './admin/DriverVerification';
 import DriverVerificationEnhanced from './admin/DriverVerificationEnhanced';
 import { PlatformAnalytics } from './admin/PlatformAnalytics';
 import { TripMonitoring } from './admin/TripMonitoring';

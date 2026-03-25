@@ -181,8 +181,11 @@ export async function findBestDriverMatch(
   const matches: DriverMatch[] = [];
 
   for (const driver of availableDrivers) {
-    const driverScore = driver.driver_scores?.score || 0;
-    const driverRating = driver.driver_scores?.average_rating || 5.0;
+    const scoreData = Array.isArray(driver.driver_scores)
+      ? driver.driver_scores[0]
+      : driver.driver_scores;
+    const driverScore = scoreData?.score || 0;
+    const driverRating = scoreData?.average_rating || 5.0;
 
     // Apply trust mode filter
     if (trustModeEnabled && driverScore < config.trust_mode_threshold) {
@@ -225,10 +228,13 @@ export async function findBestDriverMatch(
       historyScore * config.history_weight;
 
     const eta = calculateEstimatedDurationMinutes(distance);
+    const profile = Array.isArray(driver.user_profiles)
+      ? driver.user_profiles[0]
+      : driver.user_profiles;
 
     matches.push({
       driver_id: driver.id,
-      driver_name: driver.user_profiles.full_name,
+      driver_name: profile?.full_name || 'Conductor',
       vehicle_info: `${driver.vehicle_brand} ${driver.vehicle_model} - ${driver.vehicle_plate}`,
       distance_km: Math.round(distance * 100) / 100,
       score: driverScore,
@@ -444,7 +450,7 @@ export async function aggregateTripDemand(date?: string): Promise<void> {
       hourlyData.get(hour)!.push(trip);
     });
 
-    for (const [hour, hourTrips] of hourlyData) {
+    for (const [, hourTrips] of hourlyData) {
       const avgWait =
         hourTrips
           .filter((t) => t.accepted_at)
