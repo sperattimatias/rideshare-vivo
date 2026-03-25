@@ -11,6 +11,7 @@ import { calculateDriverEarnings } from '../../lib/pricing';
 import { calculateTripCompletion, completeTripTransaction, validateTripCompletion } from '../../lib/tripCompletion';
 import { StaticMapLeaflet } from '../../components/StaticMapLeaflet';
 import { StaticMap } from '../../components/StaticMap';
+import { toDbGeographyPoint } from '../../lib/geospatial';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type PassengerRow = Database['public']['Tables']['passengers']['Row'];
@@ -38,7 +39,7 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
       await supabase
         .from('drivers')
         .update({
-          current_location: JSON.stringify({ lat, lon }),
+          current_location: toDbGeographyPoint({ lat, lon }),
           last_location_update: new Date().toISOString(),
         })
         .eq('id', trip.driver_id);

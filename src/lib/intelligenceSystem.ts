@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { calculateDistanceKm, calculateEstimatedDurationMinutes } from './geo';
+import { fromDbGeographyPoint } from './geospatial';
 
 export interface DriverScore {
   driver_id: string;
@@ -198,14 +199,14 @@ export async function findBestDriverMatch(
     }
 
     // Calculate distance
-    const location = driver.current_location as { latitude: number; longitude: number };
-    if (!location?.latitude || !location?.longitude) continue;
+    const location = fromDbGeographyPoint(driver.current_location);
+    if (!location) continue;
 
     const distance = calculateDistanceKm(
       passengerLat,
       passengerLon,
-      location.latitude,
-      location.longitude
+      location.lat,
+      location.lon
     );
 
     // Skip if too far
