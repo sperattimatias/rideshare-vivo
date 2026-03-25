@@ -13,8 +13,9 @@ export interface SupportDepartment {
 export interface SupportCategory {
   id: string;
   name: string;
+  slug: string | null;
   description: string;
-  department_id: string;
+  department_id: string | null;
   requires_urgent_attention: boolean;
   is_active: boolean;
 }
