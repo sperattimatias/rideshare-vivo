@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { calculateDistanceKm, formatDistance, isValidCoordinate } from '../../lib/geo';
 import { calculateDriverEarnings } from '../../lib/pricing';
+import { fromDbGeographyPoint } from '../../lib/geospatial';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type PassengerRow = Database['public']['Tables']['passengers']['Row'];
@@ -51,13 +52,10 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
       if (error) throw error;
 
       if (data?.current_location) {
-        try {
-          const location = JSON.parse(data.current_location);
-          if (location.lat && location.lon &&
-              isValidCoordinate(location.lat, location.lon)) {
-            setDriverLocation({ lat: location.lat, lon: location.lon });
-          }
-        } catch {
+        const location = fromDbGeographyPoint(data.current_location);
+        if (location && isValidCoordinate(location.lat, location.lon)) {
+          setDriverLocation(location);
+        } else {
           setDriverLocation(null);
         }
       }

@@ -4,6 +4,7 @@ import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
+import { toDbGeographyPoint } from '../../lib/geospatial';
 
 type DriverRow = Database['public']['Tables']['drivers']['Row'];
 
@@ -55,7 +56,10 @@ export function AvailabilityToggle({ driver, onUpdate }: AvailabilityToggleProps
         if ('geolocation' in navigator) {
           navigator.geolocation.getCurrentPosition(
             async (position) => {
-              const locationPoint = `POINT(${position.coords.longitude} ${position.coords.latitude})`;
+              const locationPoint = toDbGeographyPoint({
+                lat: position.coords.latitude,
+                lon: position.coords.longitude,
+              });
 
               await supabase
                 .from('drivers')
