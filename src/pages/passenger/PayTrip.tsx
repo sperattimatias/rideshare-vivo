@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, CreditCard, AlertCircle, CheckCircle, Clock, Loader } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
@@ -27,6 +27,7 @@ export function PayTrip({ tripId, onBack, onPaymentComplete }: PayTripProps) {
   const [error, setError] = useState('');
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const handledApprovedRef = useRef(false);
 
   useEffect(() => {
     fetchTripDetails();
@@ -65,7 +66,8 @@ export function PayTrip({ tripId, onBack, onPaymentComplete }: PayTripProps) {
       const status = await getPaymentStatus(tripId);
       if (status) {
         setPaymentStatus(status.status);
-        if (status.status === 'approved') {
+        if (status.status === 'approved' && !handledApprovedRef.current) {
+          handledApprovedRef.current = true;
           setTimeout(() => {
             onPaymentComplete();
           }, 2000);
@@ -81,6 +83,10 @@ export function PayTrip({ tripId, onBack, onPaymentComplete }: PayTripProps) {
   const handlePayment = async () => {
     if (!trip || !trip.driver) {
       setError('Información del viaje incompleta');
+      return;
+    }
+    if (paymentStatus === 'approved') {
+      setError('Este viaje ya fue pagado');
       return;
     }
 

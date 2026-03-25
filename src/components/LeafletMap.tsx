@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Car, User, MapPin } from 'lucide-react';
+import { Car, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import 'leaflet/dist/leaflet.css';
 

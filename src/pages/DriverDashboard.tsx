@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Car, DollarSign, Star, AlertCircle, User, CheckCircle, XCircle, Clock, TrendingUp, Navigation, MessageCircle } from 'lucide-react';
+import { Car, DollarSign, Star, AlertCircle, User, CheckCircle, XCircle, Clock, TrendingUp, MessageCircle } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { NotificationCenter } from '../components/NotificationCenter';
