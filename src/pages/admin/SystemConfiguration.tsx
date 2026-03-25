@@ -787,7 +787,7 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
                     </p>
                     <p className="text-xs text-gray-600">
                       Comisión: {rule.platform_commission_percent}% | Multiplicador:{' '}
-                      {rule.surge_multiplier}x
+                      {rule.surge_multiplier_max}x
                     </p>
                   </div>
                   <div className="text-right">
