@@ -1,6 +1,32 @@
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useState, useEffect, lazy, Suspense, useMemo } from 'react';
-import { supabase } from './lib/supabase';
+import { isUserAdmin } from './services/admin/adminService';
+import { getDriverIdByUserId } from './services/drivers/driverService';
+
+import { Login } from './pages/auth/Login';
+import { SignUp } from './pages/auth/SignUp';
+import { RequestRide } from './pages/passenger/RequestRide';
+import { ActiveRide } from './pages/passenger/ActiveRide';
+import { RideHistory } from './pages/passenger/RideHistory';
+import { RateTrip } from './pages/passenger/RateTrip';
+import { PayTrip } from './pages/passenger/PayTrip';
+import { Support as PassengerSupport } from './pages/passenger/Support';
+import { DriverProfile } from './pages/driver/DriverProfile';
+import { CompleteProfile } from './pages/driver/CompleteProfile';
+import { Earnings } from './pages/driver/Earnings';
+import { Support as DriverSupport } from './pages/driver/Support';
+import OperationalDashboard from './pages/admin/OperationalDashboard';
+import IncidentManagement from './pages/admin/IncidentManagement';
+import AuditLogs from './pages/admin/AuditLogs';
+import IntelligenceCenter from './pages/admin/IntelligenceCenter';
+import DemandRadar from './pages/admin/DemandRadar';
+import { ServiceZones } from './pages/admin/ServiceZones';
+import DriverVerificationEnhanced from './pages/admin/DriverVerificationEnhanced';
+import { PlatformAnalytics } from './pages/admin/PlatformAnalytics';
+import { TripMonitoring } from './pages/admin/TripMonitoring';
+import { UserManagement } from './pages/admin/UserManagement';
+import { SystemConfiguration } from './pages/admin/SystemConfiguration';
+import { SupportDashboard } from './pages/admin/SupportDashboard';
 
 import { Login } from './pages/auth/Login';
 import { SignUp } from './pages/auth/SignUp';
@@ -116,13 +142,8 @@ function AppContent() {
 
     const checkAdminStatus = async () => {
       try {
-        const { data, error } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        setIsAdmin(!error && !!data);
+        const admin = await isUserAdmin(user.id);
+        setIsAdmin(admin);
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);
@@ -141,13 +162,8 @@ function AppContent() {
     }
 
     const fetchDriverId = async () => {
-      const { data } = await supabase
-        .from('drivers')
-        .select('id')
-        .eq('user_id', profile.id)
-        .maybeSingle();
-
-      setDriverId(data?.id || null);
+      const id = await getDriverIdByUserId(profile.id);
+      setDriverId(id);
     };
 
     fetchDriverId();
