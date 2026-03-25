@@ -20,7 +20,7 @@ export async function calculateTripCompletion(
   const startTime = new Date(startTimestamp);
   const actualDurationMinutes = Math.floor((Date.now() - startTime.getTime()) / 60000);
 
-  const pricingConfig = getPricingConfig();
+  const pricingConfig = await getPricingConfig();
   const finalFare = calculateFare(actualDistanceKm, pricingConfig);
 
   const driverEarnings = calculateDriverEarnings(finalFare);

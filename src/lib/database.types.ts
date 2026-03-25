@@ -1214,6 +1214,16 @@ export interface Database {
         }
         Returns: number
       }
+      accept_trip: {
+        Args: {
+          p_trip_id: string
+          p_driver_id: string
+        }
+        Returns: {
+          success: boolean
+          message: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

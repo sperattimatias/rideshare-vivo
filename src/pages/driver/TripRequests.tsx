@@ -96,30 +96,23 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
     setAccepting(tripId);
 
     try {
-      const { error: updateError } = await supabase
-        .from('trips')
-        .update({
-          driver_id: driverId,
-          status: 'ACCEPTED',
-          accepted_at: new Date().toISOString(),
-        })
-        .eq('id', tripId)
-        .is('driver_id', null);
+      const { data, error } = await supabase
+        .rpc('accept_trip', {
+          p_trip_id: tripId,
+          p_driver_id: driverId,
+        });
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
-      await supabase
-        .from('drivers')
-        .update({
-          is_on_trip: true,
-        })
-        .eq('id', driverId);
+      const result = data?.[0];
+      if (!result?.success) {
+        await fetchTripRequests();
+        return;
+      }
 
       onAccept();
-      fetchTripRequests();
     } catch (error) {
-      console.error('Error accepting trip:', error);
-      alert('Error al aceptar el viaje. Puede que otro conductor ya lo haya aceptado.');
+      console.error('Error al aceptar viaje:', error);
     } finally {
       setAccepting(null);
     }

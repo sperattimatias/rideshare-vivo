@@ -10,7 +10,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { calculateRoute, type Coordinates } from '../../lib/maps';
 import { formatDistance, formatDuration } from '../../lib/geo';
-import { calculateFare } from '../../lib/pricing';
+import { calculateFare, getPricingConfig } from '../../lib/pricing';
 import { isPointInServiceZone } from '../../lib/serviceZones';
 
 interface RequestRideProps {
@@ -63,7 +63,8 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
       }
 
       const { distance, duration } = routeResult.route;
-      const fare = calculateFare(distance);
+      const pricingConfig = await getPricingConfig();
+      const fare = calculateFare(distance, pricingConfig);
 
       setEstimatedDistance(distance);
       setEstimatedDuration(duration);

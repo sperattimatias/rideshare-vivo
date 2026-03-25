@@ -1,3 +1,5 @@
+import { supabase } from './supabase';
+
 export interface PricingConfig {
   baseFare: number;
   perKmRate: number;
@@ -6,30 +8,61 @@ export interface PricingConfig {
   peakHourMultiplier?: number;
 }
 
-const DEFAULT_PRICING: PricingConfig = {
+const FALLBACK_PRICING: PricingConfig = {
   baseFare: 500,
   perKmRate: 150,
   minimumFare: 500,
 };
 
-export function calculateFare(distanceKm: number, config: PricingConfig = DEFAULT_PRICING): number {
-  if (distanceKm < 0) {
-    throw new Error('Distancia inválida');
+let cachedPricing: PricingConfig | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+
+export async function getPricingConfig(): Promise<PricingConfig> {
+  if (cachedPricing && Date.now() - cacheTimestamp < CACHE_TTL_MS) {
+    return cachedPricing;
   }
 
-  const calculatedFare = config.baseFare + (distanceKm * config.perKmRate);
+  try {
+    const { data, error } = await supabase
+      .from('pricing_rules')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  if (config.minimumFare && calculatedFare < config.minimumFare) {
-    return config.minimumFare;
+    if (error) throw error;
+
+    if (data) {
+      cachedPricing = {
+        baseFare: data.base_fare,
+        perKmRate: data.per_km_rate,
+        minimumFare: data.minimum_fare ?? undefined,
+        peakHourMultiplier: data.surge_multiplier ?? undefined,
+      };
+      cacheTimestamp = Date.now();
+      return cachedPricing;
+    }
+  } catch (err) {
+    console.error('Error fetching pricing rules, using fallback:', err);
   }
 
-  return Math.round(calculatedFare);
+  return FALLBACK_PRICING;
 }
 
-export function calculateDriverEarnings(fare: number, platformCommission: number = 0.20): number {
+export function calculateFare(distanceKm: number, config: PricingConfig): number {
+  if (distanceKm < 0) throw new Error('Distancia inválida');
+  const calculated = config.baseFare + distanceKm * config.perKmRate;
+  const fare = config.minimumFare ? Math.max(calculated, config.minimumFare) : calculated;
+  return Math.round(fare);
+}
+
+export function calculateDriverEarnings(fare: number, platformCommission = 0.20): number {
   return Math.round(fare * (1 - platformCommission));
 }
 
-export function getPricingConfig(): PricingConfig {
-  return DEFAULT_PRICING;
+export function clearPricingCache() {
+  cachedPricing = null;
+  cacheTimestamp = 0;
 }

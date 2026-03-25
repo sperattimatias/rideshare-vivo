@@ -72,6 +72,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string, userType: 'PASSENGER' | 'DRIVER' | 'ADMIN') => {
+    if (userType === 'ADMIN') {
+      return { error: new Error('Los administradores son creados manualmente por el equipo de VIVO.') };
+    }
+
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
