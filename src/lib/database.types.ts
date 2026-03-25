@@ -1212,9 +1212,7 @@ interface DatabaseGenerated {
         Returns: Json
       }
       mark_all_notifications_as_read: {
-        Args: {
-          p_user_id: string
-        }
+        Args: Record<PropertyKey, never>
         Returns: number
       }
       accept_trip: {
