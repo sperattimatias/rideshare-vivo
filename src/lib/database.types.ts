@@ -457,6 +457,38 @@ interface DatabaseGenerated {
           created_at?: string
         }
       }
+      operational_events: {
+        Row: {
+          id: string
+          domain: string
+          action: string
+          status: string
+          entity_id: string | null
+          actor_user_id: string | null
+          metadata: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          domain: string
+          action: string
+          status: string
+          entity_id?: string | null
+          actor_user_id?: string | null
+          metadata?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          domain?: string
+          action?: string
+          status?: string
+          entity_id?: string | null
+          actor_user_id?: string | null
+          metadata?: Json
+          created_at?: string
+        }
+      }
       driver_verification_history: {
         Row: {
           id: string
@@ -1232,6 +1264,16 @@ interface DatabaseGenerated {
       mark_all_notifications_as_read: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      log_operational_event: {
+        Args: {
+          p_domain: string
+          p_action: string
+          p_status: string
+          p_entity_id?: string | null
+          p_metadata?: Json
+        }
+        Returns: string
       }
       process_trip_payment_webhook: {
         Args: {

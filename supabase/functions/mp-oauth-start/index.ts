@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { createRequestContext, logError, logInfo } from "../_shared/observability.ts";
+import { requireEnv } from "../_shared/env.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +22,7 @@ function generateSecureState(): string {
 }
 
 Deno.serve(async (req: Request) => {
+  const context = createRequestContext(req, "mp-oauth-start");
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -28,12 +31,8 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error("Configuración de Supabase no disponible");
-    }
+    const { SUPABASE_URL: supabaseUrl, SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey } =
+      requireEnv(["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -68,7 +67,7 @@ Deno.serve(async (req: Request) => {
       .in("key", ["mp_app_id", "mp_environment"]);
 
     if (settingsError) {
-      console.error("Error fetching settings:", settingsError);
+      logError(context, "failed to fetch payment settings", settingsError);
       throw new Error("Error al obtener configuración de Mercado Pago");
     }
 
@@ -107,7 +106,7 @@ Deno.serve(async (req: Request) => {
       });
 
     if (sessionInsertError) {
-      console.error("Error creating oauth session:", sessionInsertError);
+      logError(context, "failed to create oauth session", sessionInsertError, { user_id: user.id, driver_id: driver.id });
       throw new Error("No se pudo iniciar una sesión OAuth segura");
     }
 
@@ -123,8 +122,21 @@ Deno.serve(async (req: Request) => {
       });
 
     if (linkStartLogError) {
-      console.error("Error logging LINK_STARTED:", linkStartLogError);
+      logError(context, "failed to insert driver_mp_linking_logs LINK_STARTED", linkStartLogError, { driver_id: driver.id });
     }
+
+    await supabase.from("operational_events").insert({
+      domain: "OAUTH",
+      action: "OAUTH_LINK_STARTED",
+      status: "SUCCESS",
+      entity_id: driver.id,
+      actor_user_id: user.id,
+      metadata: {
+        request_id: context.requestId,
+        state_prefix: state.slice(0, 8),
+      },
+    });
+    logInfo(context, "oauth link start ready", { driver_id: driver.id });
 
     const authUrl = new URL(`${baseUrl}/authorization`);
     authUrl.searchParams.set("client_id", appId);
@@ -145,7 +157,7 @@ Deno.serve(async (req: Request) => {
       },
     );
   } catch (error) {
-    console.error("Error in mp-oauth-start:", error);
+    logError(context, "mp-oauth-start failed", error);
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : "Error al iniciar OAuth",

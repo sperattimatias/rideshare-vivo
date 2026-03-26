@@ -1,4 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createRequestContext, logError, logInfo } from '../_shared/observability.ts';
+import { requireEnv } from '../_shared/env.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,6 +25,8 @@ async function sha256Hex(value: string): Promise<string> {
 }
 
 Deno.serve(async (req: Request) => {
+  const context = createRequestContext(req, 'create-payment-preference');
+
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
@@ -31,12 +35,8 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Configuración de Supabase no disponible');
-    }
+    const { SUPABASE_URL: supabaseUrl, SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey } =
+      requireEnv(['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']);
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -64,6 +64,7 @@ Deno.serve(async (req: Request) => {
 
     const body: RequestBody = await req.json();
     const { tripId } = body;
+    logInfo(context, 'payment preference requested', { trip_id: tripId });
 
     if (!tripId) {
       return new Response(JSON.stringify({ error: 'tripId es requerido' }), {
@@ -239,7 +240,7 @@ Deno.serve(async (req: Request) => {
 
     if (!mpResponse.ok) {
       const errorData = await mpResponse.text();
-      console.error('Error de Mercado Pago:', errorData);
+      logError(context, 'mercadopago checkout/preferences failed', new Error('MP_API_ERROR'), { body: errorData });
       throw new Error('Error al crear preferencia en Mercado Pago');
     }
 
@@ -267,9 +268,18 @@ Deno.serve(async (req: Request) => {
     );
 
     if (upsertError) {
-      console.error('Error al guardar pago:', upsertError);
+      logError(context, 'failed to persist trip payment preference', upsertError, { trip_id: tripId });
       throw new Error('Error al registrar la preferencia de pago');
     }
+
+    await supabase.from('operational_events').insert({
+      domain: 'PAYMENTS',
+      action: 'PAYMENT_PREFERENCE_CREATED',
+      status: 'SUCCESS',
+      entity_id: tripId,
+      actor_user_id: user.id,
+      metadata: { request_id: context.requestId, mp_preference_id: mpData.id },
+    });
 
     return new Response(
       JSON.stringify({
@@ -283,7 +293,7 @@ Deno.serve(async (req: Request) => {
       },
     );
   } catch (error) {
-    console.error('Error en create-payment-preference:', error);
+    logError(context, 'create-payment-preference failed', error);
     return new Response(
       JSON.stringify({
         error: true,

@@ -1,4 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createRequestContext, logError, logInfo } from '../_shared/observability.ts';
+import { requireEnv } from '../_shared/env.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,6 +26,7 @@ function normalizePaymentStatus(status: string): 'pending' | 'approved' | 'rejec
 }
 
 Deno.serve(async (req: Request) => {
+  const context = createRequestContext(req, 'mercadopago-webhook');
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
@@ -32,12 +35,8 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Configuración de Supabase no disponible');
-    }
+    const { SUPABASE_URL: supabaseUrl, SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey } =
+      requireEnv(['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']);
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -80,6 +79,7 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    logInfo(context, 'webhook received', { payment_id: paymentId, notification_type: notificationType });
 
     const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
       method: 'GET',
@@ -114,7 +114,7 @@ Deno.serve(async (req: Request) => {
     });
 
     if (processError) {
-      console.error('Error processing webhook in DB:', processError);
+      logError(context, 'failed processing webhook RPC', processError, { external_reference: externalReference });
       throw new Error('No se pudo aplicar el webhook en base de datos');
     }
 
@@ -126,6 +126,19 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    await supabase.from('operational_events').insert({
+      domain: 'PAYMENTS',
+      action: 'PAYMENT_WEBHOOK_PROCESSED',
+      status: result.status === 'approved' ? 'SUCCESS' : 'REJECTED',
+      entity_id: result.trip_id,
+      metadata: {
+        request_id: context.requestId,
+        external_reference: externalReference,
+        status: result.status,
+        status_changed: result.status_changed,
+      },
+    });
 
     return new Response(
       JSON.stringify({
@@ -140,7 +153,7 @@ Deno.serve(async (req: Request) => {
       },
     );
   } catch (error) {
-    console.error('Error en webhook:', error);
+    logError(context, 'mercadopago-webhook failed', error);
     return new Response(
       JSON.stringify({
         error: true,

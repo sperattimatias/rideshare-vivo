@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { MapPin, Clock, DollarSign, User, Navigation, CheckCircle, XCircle } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
+import { FeedbackBanner } from '../../components/FeedbackBanner';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { calculateDistanceKm, formatDistance, isValidCoordinate } from '../../lib/geo';
 import { calculateDriverEarnings } from '../../lib/pricing';
 import { fromDbGeographyPoint } from '../../lib/geospatial';
+import { getTraceId, logClientError, logOperationalEvent } from '../../lib/observability';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type PassengerRow = Database['public']['Tables']['passengers']['Row'];
@@ -28,6 +30,7 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
   const [accepting, setAccepting] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [driverLocation, setDriverLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const [feedback, setFeedback] = useState<{ tone: 'error' | 'info'; message: string } | null>(null);
 
   useEffect(() => {
     if (isOnline) {
@@ -103,16 +106,33 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
 
       const result = data?.[0];
       if (!result?.success) {
-        if (result?.message) {
-          alert(result.message);
-        }
+        const traceId = getTraceId();
+        setFeedback({
+          tone: 'info',
+          message: `${result?.message || 'No se pudo aceptar el viaje'} (trace: ${traceId.slice(0, 8)})`,
+        });
+        await logOperationalEvent({
+          domain: 'TRIP_ACCEPTANCE',
+          action: 'ACCEPT_TRIP',
+          status: 'REJECTED',
+          entityId: tripId,
+          metadata: { code: result?.code ?? 'UNKNOWN', traceId },
+        });
         await fetchTripRequests();
         return;
       }
 
+      await logOperationalEvent({
+        domain: 'TRIP_ACCEPTANCE',
+        action: 'ACCEPT_TRIP',
+        status: 'SUCCESS',
+        entityId: tripId,
+      });
       onAccept();
     } catch (error) {
-      console.error('Error al aceptar viaje:', error);
+      const traceId = getTraceId();
+      logClientError('ACCEPT_TRIP_FAILED', error, { tripId, traceId });
+      setFeedback({ tone: 'error', message: `Error al aceptar el viaje (trace: ${traceId.slice(0, 8)})` });
     } finally {
       setAccepting(null);
     }
@@ -192,6 +212,13 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
 
   return (
     <div className="space-y-4">
+      {feedback && (
+        <FeedbackBanner
+          tone={feedback.tone}
+          title={feedback.tone === 'error' ? 'No se pudo completar la operación' : 'Acción no permitida'}
+          message={feedback.message}
+        />
+      )}
       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />

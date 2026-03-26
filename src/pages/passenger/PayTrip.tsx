@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, CreditCard, AlertCircle, CheckCircle, Clock, Loader } from 'lucide-react';
+import { ArrowLeft, CreditCard, CheckCircle, Clock, Loader } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
+import { FeedbackBanner } from '../../components/FeedbackBanner';
 import { supabase } from '../../lib/supabase';
 import { createPaymentPreference, getPaymentStatus } from '../../lib/mercadoPago';
 import type { Database } from '../../lib/database.types';
+import { AppError } from '../../lib/errors';
+import { logClientError, logOperationalEvent, getTraceId } from '../../lib/observability';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type DriverRow = Database['public']['Tables']['drivers']['Row'];
@@ -28,6 +31,7 @@ export function PayTrip({ tripId, onBack, onPaymentComplete }: PayTripProps) {
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const handledApprovedRef = useRef(false);
+  const traceIdRef = useRef(getTraceId());
 
   useEffect(() => {
     fetchTripDetails();
@@ -53,7 +57,7 @@ export function PayTrip({ tripId, onBack, onPaymentComplete }: PayTripProps) {
       if (error) throw error;
       setTrip(data as TripWithDriver);
     } catch (err) {
-      console.error('Error fetching trip:', err);
+      logClientError('PAY_TRIP_FETCH_TRIP', err, { tripId, traceId: traceIdRef.current });
       setError('Error al cargar detalles del viaje');
     } finally {
       setLoading(false);
@@ -74,7 +78,7 @@ export function PayTrip({ tripId, onBack, onPaymentComplete }: PayTripProps) {
         }
       }
     } catch (err) {
-      console.error('Error checking payment:', err);
+      logClientError('PAY_TRIP_CHECK_PAYMENT', err, { tripId, traceId: traceIdRef.current });
     } finally {
       setCheckingStatus(false);
     }
@@ -99,14 +103,34 @@ export function PayTrip({ tripId, onBack, onPaymentComplete }: PayTripProps) {
     setError('');
 
     try {
+      await logOperationalEvent({
+        domain: 'PAYMENTS',
+        action: 'PAYMENT_PREFERENCE_REQUESTED',
+        status: 'SUCCESS',
+        entityId: trip.id,
+        metadata: { traceId: traceIdRef.current },
+      });
+
       const preference = await createPaymentPreference({
         tripId: trip.id,
       });
 
       window.location.href = preference.init_point;
     } catch (err) {
-      console.error('Error creating payment:', err);
-      setError((err as Error).message || 'Error al crear preferencia de pago');
+      const appError = logClientError('PAY_TRIP_CREATE_PAYMENT', err, { tripId: trip.id, traceId: traceIdRef.current });
+      await logOperationalEvent({
+        domain: 'PAYMENTS',
+        action: 'PAYMENT_PREFERENCE_REQUESTED',
+        status: 'FAILED',
+        entityId: trip.id,
+        metadata: { traceId: traceIdRef.current, reason: appError.code },
+      });
+
+      if (err instanceof AppError && err.kind === 'BUSINESS') {
+        setError(err.userMessage);
+      } else {
+        setError('No pudimos iniciar el pago. Reintentá en unos segundos.');
+      }
     } finally {
       setProcessing(false);
     }
@@ -164,9 +188,12 @@ export function PayTrip({ tripId, onBack, onPaymentComplete }: PayTripProps) {
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-2">
-            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
+          <div className="mb-6">
+            <FeedbackBanner
+              tone="error"
+              title="No se pudo completar la operación"
+              message={`${error} (trace: ${traceIdRef.current.slice(0, 8)})`}
+            />
           </div>
         )}
 

@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { createRequestContext, logError, logInfo } from "../_shared/observability.ts";
+import { requireEnv } from "../_shared/env.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,6 +44,7 @@ function htmlError(message: string, status = 500): Response {
 }
 
 Deno.serve(async (req: Request) => {
+  const context = createRequestContext(req, "mp-oauth-callback");
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -50,12 +53,8 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error("Configuración de Supabase no disponible");
-    }
+    const { SUPABASE_URL: supabaseUrl, SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey } =
+      requireEnv(["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -82,7 +81,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (consumeSessionError) {
-      console.error("Error consuming oauth session:", consumeSessionError);
+      logError(context, "failed to consume oauth session", consumeSessionError, { state_prefix: state.slice(0, 8) });
       throw new Error("No se pudo validar la sesión OAuth");
     }
 
@@ -122,7 +121,7 @@ Deno.serve(async (req: Request) => {
       .in("key", ["mp_app_id", "mp_client_secret", "mp_environment"]);
 
     if (settingsError) {
-      console.error("Error fetching settings:", settingsError);
+      logError(context, "failed to fetch payment settings", settingsError);
       throw new Error("Error al obtener configuración");
     }
 
@@ -162,7 +161,7 @@ Deno.serve(async (req: Request) => {
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.text();
-      console.error("Token exchange error:", errorData);
+      logError(context, "token exchange failed", new Error("MP_TOKEN_EXCHANGE_ERROR"), { response_body: errorData, response_status: tokenResponse.status });
 
       await supabase
         .from("driver_mp_linking_logs")
@@ -194,7 +193,7 @@ Deno.serve(async (req: Request) => {
       .eq("is_active", true);
 
     if (revokeError) {
-      console.error("Error revoking old tokens:", revokeError);
+      logError(context, "failed to revoke old tokens", revokeError, { driver_id: driverId });
     }
 
     const { error: insertError } = await supabase
@@ -212,7 +211,7 @@ Deno.serve(async (req: Request) => {
       });
 
     if (insertError) {
-      console.error("Error saving token:", insertError);
+      logError(context, "failed to persist oauth token", insertError, { driver_id: driverId });
       throw new Error("Error al guardar token de acceso");
     }
 
@@ -228,11 +227,11 @@ Deno.serve(async (req: Request) => {
       .eq("id", driverId);
 
     if (updateDriverError) {
-      console.error("Error updating driver:", updateDriverError);
+      logError(context, "failed to update driver oauth status", updateDriverError, { driver_id: driverId });
       throw new Error("Error al actualizar conductor");
     }
 
-    const { error: logError } = await supabase
+    const { error: linkLogError } = await supabase
       .from("driver_mp_linking_logs")
       .insert({
         driver_id: driverId,
@@ -243,9 +242,22 @@ Deno.serve(async (req: Request) => {
         },
       });
 
-    if (logError) {
-      console.error("Error logging action:", logError);
+    if (linkLogError) {
+      logError(context, "failed to persist link success history", linkLogError, { driver_id: driverId });
     }
+
+    await supabase.from("operational_events").insert({
+      domain: "OAUTH",
+      action: "OAUTH_LINK_COMPLETED",
+      status: "SUCCESS",
+      entity_id: driverId,
+      actor_user_id: oauthSession.user_id,
+      metadata: {
+        request_id: context.requestId,
+        oauth_session_id: oauthSession.id,
+      },
+    });
+    logInfo(context, "oauth link completed", { driver_id: driverId });
 
     return new Response(
       `<!DOCTYPE html>
@@ -388,7 +400,7 @@ Deno.serve(async (req: Request) => {
       },
     );
   } catch (error) {
-    console.error("Error in mp-oauth-callback:", error);
+    logError(context, "mp-oauth-callback failed", error);
     return htmlError(error instanceof Error ? error.message : "Error desconocido", 500);
   }
 });

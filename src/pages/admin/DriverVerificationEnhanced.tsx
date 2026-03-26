@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { FeedbackBanner } from '../../components/FeedbackBanner';
 import { supabase } from '../../lib/supabase';
 import {
   approveDriver,
@@ -22,6 +23,7 @@ import {
   suspendDriver,
   reactivateDriver,
 } from '../../lib/adminOperations';
+import { getTraceId, logClientError, logOperationalEvent } from '../../lib/observability';
 
 interface DriverWithProfile {
   id: string;
@@ -79,6 +81,7 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
   const [selectedDriver, setSelectedDriver] = useState<DriverWithProfile | null>(null);
   const [verificationHistory, setVerificationHistory] = useState<VerificationHistory[]>([]);
   const [processing, setProcessing] = useState(false);
+  const [feedback, setFeedback] = useState<{ tone: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   useEffect(() => {
     fetchDrivers();
@@ -155,12 +158,21 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
     setProcessing(true);
     try {
       await approveDriver(selectedDriver.id, notes || undefined);
-      alert('Driver approved successfully');
+      const traceId = getTraceId();
+      await logOperationalEvent({
+        domain: 'ADMIN',
+        action: 'DRIVER_APPROVED',
+        status: 'SUCCESS',
+        entityId: selectedDriver.id,
+        metadata: { traceId },
+      });
+      setFeedback({ tone: 'success', message: `Conductor aprobado correctamente (trace: ${traceId.slice(0, 8)})` });
       setSelectedDriver(null);
       await fetchDrivers();
     } catch (error) {
-      console.error('Error approving driver:', error);
-      alert('Failed to approve driver');
+      const traceId = getTraceId();
+      logClientError('ADMIN_APPROVE_DRIVER_FAILED', error, { driverId: selectedDriver.id, traceId });
+      setFeedback({ tone: 'error', message: `No se pudo aprobar al conductor (trace: ${traceId.slice(0, 8)})` });
     } finally {
       setProcessing(false);
     }
@@ -171,19 +183,28 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
 
     const reason = prompt('Razón de rechazo (requerida):');
     if (!reason) {
-      alert('La razón de rechazo es requerida');
+      setFeedback({ tone: 'info', message: 'La razón de rechazo es requerida' });
       return;
     }
 
     setProcessing(true);
     try {
       await rejectDriver(selectedDriver.id, reason);
-      alert('Conductor rechazado');
+      const traceId = getTraceId();
+      await logOperationalEvent({
+        domain: 'ADMIN',
+        action: 'DRIVER_REJECTED',
+        status: 'SUCCESS',
+        entityId: selectedDriver.id,
+        metadata: { reason, traceId },
+      });
+      setFeedback({ tone: 'success', message: `Conductor rechazado (trace: ${traceId.slice(0, 8)})` });
       setSelectedDriver(null);
       await fetchDrivers();
     } catch (error) {
-      console.error('Error rejecting driver:', error);
-      alert('Error al rechazar conductor');
+      const traceId = getTraceId();
+      logClientError('ADMIN_REJECT_DRIVER_FAILED', error, { driverId: selectedDriver.id, traceId });
+      setFeedback({ tone: 'error', message: `Error al rechazar conductor (trace: ${traceId.slice(0, 8)})` });
     } finally {
       setProcessing(false);
     }
@@ -194,19 +215,28 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
 
     const reason = prompt('Razón de suspensión (requerida):');
     if (!reason) {
-      alert('La razón de suspensión es requerida');
+      setFeedback({ tone: 'info', message: 'La razón de suspensión es requerida' });
       return;
     }
 
     setProcessing(true);
     try {
       await suspendDriver(selectedDriver.id, reason);
-      alert('Conductor suspendido');
+      const traceId = getTraceId();
+      await logOperationalEvent({
+        domain: 'ADMIN',
+        action: 'DRIVER_SUSPENDED',
+        status: 'SUCCESS',
+        entityId: selectedDriver.id,
+        metadata: { reason, traceId },
+      });
+      setFeedback({ tone: 'success', message: `Conductor suspendido (trace: ${traceId.slice(0, 8)})` });
       setSelectedDriver(null);
       await fetchDrivers();
     } catch (error) {
-      console.error('Error suspending driver:', error);
-      alert('Error al suspender conductor');
+      const traceId = getTraceId();
+      logClientError('ADMIN_SUSPEND_DRIVER_FAILED', error, { driverId: selectedDriver.id, traceId });
+      setFeedback({ tone: 'error', message: `Error al suspender conductor (trace: ${traceId.slice(0, 8)})` });
     } finally {
       setProcessing(false);
     }
@@ -221,12 +251,21 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
     setProcessing(true);
     try {
       await reactivateDriver(selectedDriver.id, notes || undefined);
-      alert('Conductor reactivado');
+      const traceId = getTraceId();
+      await logOperationalEvent({
+        domain: 'ADMIN',
+        action: 'DRIVER_REACTIVATED',
+        status: 'SUCCESS',
+        entityId: selectedDriver.id,
+        metadata: { notes, traceId },
+      });
+      setFeedback({ tone: 'success', message: `Conductor reactivado (trace: ${traceId.slice(0, 8)})` });
       setSelectedDriver(null);
       await fetchDrivers();
     } catch (error) {
-      console.error('Error reactivating driver:', error);
-      alert('Error al reactivar conductor');
+      const traceId = getTraceId();
+      logClientError('ADMIN_REACTIVATE_DRIVER_FAILED', error, { driverId: selectedDriver.id, traceId });
+      setFeedback({ tone: 'error', message: `Error al reactivar conductor (trace: ${traceId.slice(0, 8)})` });
     } finally {
       setProcessing(false);
     }
@@ -277,6 +316,11 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto">
+          {feedback && (
+            <div className="mb-4">
+              <FeedbackBanner tone={feedback.tone} title="Estado de operación" message={feedback.message} />
+            </div>
+          )}
           <button
             onClick={() => setSelectedDriver(null)}
             className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
@@ -537,6 +581,11 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {feedback && (
+          <div className="mb-4">
+            <FeedbackBanner tone={feedback.tone} title="Estado de operación" message={feedback.message} />
+          </div>
+        )}
         <Button
           variant="outline"
           size="sm"
