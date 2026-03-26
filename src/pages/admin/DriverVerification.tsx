@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, XCircle, AlertCircle, User, Car, FileText, ExternalLink } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { AdminLoadingState, AdminEmptyState } from '../../components/admin/AdminStates';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
