@@ -1,15 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from './database.types';
+import { getClientEnv } from './env';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const { supabaseUrl, supabaseAnonKey } = getClientEnv();
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-// NOTE: Temporalmente sin genérico <Database> para evitar bloqueo por deriva de tipos.
-// En Fase 1.2 debe volver a tipado fuerte usando tipos generados oficiales de Supabase.
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,

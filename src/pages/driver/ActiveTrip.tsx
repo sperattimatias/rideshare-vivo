@@ -5,12 +5,12 @@ import { Button } from '../../components/Button';
 import { STRINGS } from '../../lib/strings';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
-import { calculateFare } from '../../lib/pricing';
-import { canTransitionTo, getNextDriverStatus, canDriverCancel, getDriverActionLabel } from '../../lib/tripStates';
+import { canTransitionTo, canDriverCancel } from '../../lib/tripStates';
 import { calculateDriverEarnings } from '../../lib/pricing';
 import { calculateTripCompletion, completeTripTransaction, validateTripCompletion } from '../../lib/tripCompletion';
 import { StaticMapLeaflet } from '../../components/StaticMapLeaflet';
 import { StaticMap } from '../../components/StaticMap';
+import { toDbGeographyPoint } from '../../lib/geospatial';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type PassengerRow = Database['public']['Tables']['passengers']['Row'];
@@ -38,7 +38,7 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
       await supabase
         .from('drivers')
         .update({
-          current_location: JSON.stringify({ lat, lon }),
+          current_location: toDbGeographyPoint({ lat, lon }),
           last_location_update: new Date().toISOString(),
         })
         .eq('id', trip.driver_id);
@@ -106,7 +106,7 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
     }
   };
 
-  const updateTripStatus = async (newStatus: TripRow['status'], additionalData?: any) => {
+  const updateTripStatus = async (newStatus: TripRow['status'], additionalData?: unknown) => {
     if (!trip || updating) return;
 
     if (!canTransitionTo(trip.status, newStatus)) {
@@ -116,7 +116,7 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
 
     setUpdating(true);
     try {
-      const updates: any = {
+      const updates: unknown = {
         status: newStatus,
         updated_at: new Date().toISOString(),
         ...additionalData,

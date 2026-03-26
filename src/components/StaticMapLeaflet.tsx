@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import type { Coordinates } from '../lib/maps';
+import type { Marker as LeafletMarker } from 'leaflet';
 
 interface Marker {
   coordinates: Coordinates;
@@ -26,9 +27,9 @@ export function StaticMapLeaflet({
   height = '300px',
 }: StaticMapLeafletProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-  const polylineRef = useRef<any>(null);
+  const mapInstanceRef = useRef<unknown>(null);
+  const markersRef = useRef<LeafletMarker[]>([]);
+  const polylineRef = useRef<unknown>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {

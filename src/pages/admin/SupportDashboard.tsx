@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MessageCircle, Clock, CheckCircle, AlertCircle, Users } from 'lucide-react';
+import { MessageCircle, Clock, CheckCircle, Users } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { ChatBox } from '../../components/ChatBox';

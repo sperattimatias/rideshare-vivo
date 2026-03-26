@@ -21,7 +21,7 @@ interface NotificationCenterProps {
   onNavigate?: (link: string) => void;
 }
 
-const iconMap: { [key: string]: any } = {
+const iconMap: { [key: string]: unknown } = {
   MessageCircle,
   Car,
   CreditCard,
@@ -150,9 +150,7 @@ export function NotificationCenter({ userId, onNavigate }: NotificationCenterPro
 
   const markAllAsRead = async () => {
     try {
-      const { error } = await supabase.rpc('mark_all_notifications_as_read', {
-        p_user_id: userId,
-      });
+      const { error } = await supabase.rpc('mark_all_notifications_as_read');
 
       if (error) throw error;
 

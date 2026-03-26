@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+interface DatabaseGenerated {
   public: {
     Tables: {
       user_profiles: {
@@ -107,6 +107,7 @@ export interface Database {
           updated_at: string
           approved_at: string | null
           approved_by: string | null
+          rejection_reason: string | null
           mp_oauth_status: 'PENDING' | 'AUTHORIZED' | 'EXPIRED' | 'REVOKED'
           mp_oauth_connected_at: string | null
         }
@@ -146,6 +147,7 @@ export interface Database {
           updated_at?: string
           approved_at?: string | null
           approved_by?: string | null
+          rejection_reason?: string | null
           mp_oauth_status?: 'PENDING' | 'AUTHORIZED' | 'EXPIRED' | 'REVOKED'
           mp_oauth_connected_at?: string | null
         }
@@ -185,6 +187,7 @@ export interface Database {
           updated_at?: string
           approved_at?: string | null
           approved_by?: string | null
+          rejection_reason?: string | null
           mp_oauth_status?: 'PENDING' | 'AUTHORIZED' | 'EXPIRED' | 'REVOKED'
           mp_oauth_connected_at?: string | null
         }
@@ -451,6 +454,38 @@ export interface Database {
           metadata?: Json | null
           ip_address?: string | null
           user_agent?: string | null
+          created_at?: string
+        }
+      }
+      operational_events: {
+        Row: {
+          id: string
+          domain: string
+          action: string
+          status: string
+          entity_id: string | null
+          actor_user_id: string | null
+          metadata: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          domain: string
+          action: string
+          status: string
+          entity_id?: string | null
+          actor_user_id?: string | null
+          metadata?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          domain?: string
+          action?: string
+          status?: string
+          entity_id?: string | null
+          actor_user_id?: string | null
+          metadata?: Json
           created_at?: string
         }
       }
@@ -1019,7 +1054,9 @@ export interface Database {
           total_amount: number
           driver_amount: number
           platform_amount: number
-          mp_payment_id: string
+          mp_payment_id: string | null
+          mp_preference_id: string | null
+          external_reference: string
           mp_status: 'pending' | 'approved' | 'rejected' | 'refunded' | 'cancelled'
           mp_status_detail: string | null
           driver_mp_seller_id: string
@@ -1027,6 +1064,10 @@ export interface Database {
           payment_method: string | null
           payment_method_id: string | null
           installments: number
+          idempotency_key: string | null
+          preference_init_point: string | null
+          preference_sandbox_init_point: string | null
+          last_webhook_at: string | null
           created_at: string
           approved_at: string | null
         }
@@ -1036,7 +1077,9 @@ export interface Database {
           total_amount: number
           driver_amount: number
           platform_amount: number
-          mp_payment_id: string
+          mp_payment_id?: string | null
+          mp_preference_id?: string | null
+          external_reference: string
           mp_status: 'pending' | 'approved' | 'rejected' | 'refunded' | 'cancelled'
           mp_status_detail?: string | null
           driver_mp_seller_id: string
@@ -1044,6 +1087,10 @@ export interface Database {
           payment_method?: string | null
           payment_method_id?: string | null
           installments?: number
+          idempotency_key?: string | null
+          preference_init_point?: string | null
+          preference_sandbox_init_point?: string | null
+          last_webhook_at?: string | null
           created_at?: string
           approved_at?: string | null
         }
@@ -1053,7 +1100,9 @@ export interface Database {
           total_amount?: number
           driver_amount?: number
           platform_amount?: number
-          mp_payment_id?: string
+          mp_payment_id?: string | null
+          mp_preference_id?: string | null
+          external_reference?: string
           mp_status?: 'pending' | 'approved' | 'rejected' | 'refunded' | 'cancelled'
           mp_status_detail?: string | null
           driver_mp_seller_id?: string
@@ -1061,6 +1110,10 @@ export interface Database {
           payment_method?: string | null
           payment_method_id?: string | null
           installments?: number
+          idempotency_key?: string | null
+          preference_init_point?: string | null
+          preference_sandbox_init_point?: string | null
+          last_webhook_at?: string | null
           created_at?: string
           approved_at?: string | null
         }
@@ -1209,24 +1262,71 @@ export interface Database {
         Returns: Json
       }
       mark_all_notifications_as_read: {
-        Args: {
-          p_user_id: string
-        }
+        Args: Record<PropertyKey, never>
         Returns: number
+      }
+      log_operational_event: {
+        Args: {
+          p_domain: string
+          p_action: string
+          p_status: string
+          p_entity_id?: string | null
+          p_metadata?: Json
+        }
+        Returns: string
+      }
+      process_trip_payment_webhook: {
+        Args: {
+          p_external_reference: string
+          p_mp_payment_id: string
+          p_mp_status: string
+          p_mp_status_detail: string | null
+          p_payment_method: string | null
+          p_payment_method_id: string | null
+        }
+        Returns: {
+          processed: boolean
+          trip_id: string | null
+          status: string | null
+          status_changed: boolean
+          earnings_applied: boolean
+        }[]
       }
       accept_trip: {
         Args: {
           p_trip_id: string
-          p_driver_id: string
         }
         Returns: {
           success: boolean
+          code: string
           message: string
+          trip_id: string | null
+          driver_id: string | null
         }[]
       }
     }
     Enums: {
       [_ in never]: never
     }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
+
+type PublicTables = DatabaseGenerated['public']['Tables'];
+type PublicViews = DatabaseGenerated['public']['Views'];
+
+export type Database = {
+  public: {
+    Tables: {
+      [K in keyof PublicTables]: PublicTables[K] & { Relationships: [] };
+    };
+    Views: {
+      [K in keyof PublicViews]: PublicViews[K] & { Relationships: [] };
+    };
+    Functions: DatabaseGenerated['public']['Functions'];
+    Enums: DatabaseGenerated['public']['Enums'];
+    CompositeTypes: DatabaseGenerated['public']['CompositeTypes'];
+  };
+};

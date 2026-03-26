@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Car, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { fromDbGeographyPoint } from '../lib/geospatial';
 import 'leaflet/dist/leaflet.css';
+import type { Marker as LeafletMarker } from 'leaflet';
 
 interface Driver {
   id: string;
@@ -33,8 +35,8 @@ interface LeafletMapProps {
 
 export function LeafletMap({ className = '', center, zoom = 13 }: LeafletMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<Map<string, any>>(new Map());
+  const mapInstanceRef = useRef<unknown>(null);
+  const markersRef = useRef<Map<string, LeafletMarker>>(new Map());
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [waitingTrips, setWaitingTrips] = useState<WaitingTrip[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -139,10 +141,10 @@ export function LeafletMap({ className = '', center, zoom = 13 }: LeafletMapProp
       if (driversError) throw driversError;
 
       const mappedDrivers = (driversData || [])
-        .map((d: any) => {
+        .map((d: unknown) => {
           if (!d.current_location) return null;
 
-          const coords = parsePostGISPoint(d.current_location);
+          const coords = fromDbGeographyPoint(d.current_location);
           if (!coords) return null;
 
           return {
@@ -183,7 +185,7 @@ export function LeafletMap({ className = '', center, zoom = 13 }: LeafletMapProp
 
       if (tripsError) throw tripsError;
 
-      const mappedTrips = (tripsData || []).map((t: any) => ({
+      const mappedTrips = (tripsData || []).map((t: unknown) => ({
         id: t.id,
         passenger_name: t.passengers?.user_profiles?.full_name || 'Pasajero',
         origin_address: t.origin_address,
@@ -209,19 +211,6 @@ export function LeafletMap({ className = '', center, zoom = 13 }: LeafletMapProp
       }
     } catch (error) {
       console.error('Error loading map data:', error);
-    }
-  };
-
-  const parsePostGISPoint = (point: string): { lat: number; lon: number } | null => {
-    try {
-      const match = point.match(/POINT\(([^ ]+) ([^ ]+)\)/);
-      if (!match) return null;
-      return {
-        lon: parseFloat(match[1]),
-        lat: parseFloat(match[2]),
-      };
-    } catch {
-      return null;
     }
   };
 

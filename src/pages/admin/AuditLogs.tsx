@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Download, Eye, FileText, ArrowLeft } from 'lucide-react';
+import { Search, Download, Eye, FileText, ArrowLeft } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
@@ -12,9 +12,9 @@ interface AuditLog {
   action: string;
   entity_type: string;
   entity_id?: string;
-  old_values?: any;
-  new_values?: any;
-  metadata?: any;
+  old_values?: unknown;
+  new_values?: unknown;
+  metadata?: unknown;
   created_at: string;
   admin: {
     user: {

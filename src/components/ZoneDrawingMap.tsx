@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MapPin, Trash2, AlertCircle } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import type { Marker as LeafletMarker, Polygon as LeafletPolygon } from 'leaflet';
 
 interface Point {
   lat: number;
@@ -29,12 +30,12 @@ export function ZoneDrawingMap({
   existingZones = [],
 }: ZoneDrawingMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
+  const mapInstanceRef = useRef<unknown>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [points, setPoints] = useState<Point[]>(initialPoints);
-  const markersRef = useRef<any[]>([]);
-  const polygonRef = useRef<any>(null);
-  const existingPolygonsRef = useRef<any[]>([]);
+  const markersRef = useRef<LeafletMarker[]>([]);
+  const polygonRef = useRef<unknown>(null);
+  const existingPolygonsRef = useRef<LeafletPolygon[]>([]);
 
   useEffect(() => {
     loadLeaflet();
@@ -78,7 +79,7 @@ export function ZoneDrawingMap({
     }
   };
 
-  const handleMapClick = async (e: any) => {
+  const handleMapClick = async (e: unknown) => {
     const newPoint = {
       lat: e.latlng.lat,
       lon: e.latlng.lng,

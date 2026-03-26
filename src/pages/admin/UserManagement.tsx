@@ -46,8 +46,6 @@ export function UserManagement({ onBack }: UserManagementProps) {
       const usersWithDetails: UserWithDetails[] = [];
 
       for (const profile of profiles || []) {
-        const { data: authUser } = await supabase.auth.admin.getUserById(profile.id);
-
         const { data: adminUser } = await supabase
           .from('admin_users')
           .select('*')
@@ -56,7 +54,7 @@ export function UserManagement({ onBack }: UserManagementProps) {
 
         const userDetail: UserWithDetails = {
           ...profile,
-          email: authUser?.user?.email || '',
+          email: undefined,
           is_admin: !!adminUser
         };
 
@@ -225,7 +223,7 @@ export function UserManagement({ onBack }: UserManagementProps) {
               </div>
               <div>
                 <p className="text-sm text-gray-600">ID de usuario</p>
-                <p className="font-medium text-gray-900 text-xs">{selectedUser.user_id}</p>
+                <p className="font-medium text-gray-900 text-xs">{selectedUser.id}</p>
               </div>
             </div>
           </Card>
