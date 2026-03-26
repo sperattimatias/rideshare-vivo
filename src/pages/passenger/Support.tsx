@@ -135,7 +135,6 @@ export function Support({ onBack }: SupportProps) {
 
     try {
       await rateConversation(conversationId, ratingData.rating, ratingData.comment);
-      setShowRating(null);
       setRatingData({ rating: 0, comment: '' });
       await loadData();
       alert('Gracias por tu calificación');
