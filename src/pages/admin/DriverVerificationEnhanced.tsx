@@ -74,10 +74,12 @@ interface DriverVerificationEnhancedProps {
   onBack: () => void;
 }
 
+type DriverStatusFilter = 'PENDING_APPROVAL' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED' | 'all';
+
 export default function DriverVerificationEnhanced({ onBack }: DriverVerificationEnhancedProps) {
   const [drivers, setDrivers] = useState<DriverWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>('PENDING_APPROVAL');
+  const [filter, setFilter] = useState<DriverStatusFilter>('PENDING_APPROVAL');
   const [selectedDriver, setSelectedDriver] = useState<DriverWithProfile | null>(null);
   const [verificationHistory, setVerificationHistory] = useState<VerificationHistory[]>([]);
   const [processing, setProcessing] = useState(false);

@@ -49,14 +49,3 @@ export function toAppError(error: unknown, fallback: Omit<AppErrorLike, 'message
     details: error,
   });
 }
-
-export function isBusinessCode(code: string): boolean {
-  return [
-    'TRIP_ALREADY_TAKEN',
-    'TRIP_STATE_INVALID',
-    'DRIVER_NOT_ENABLED',
-    'DRIVER_ALREADY_ON_TRIP',
-    'INVALID_TRIP_STATUS',
-    'UNAUTHORIZED_PASSENGER',
-  ].includes(code);
-}

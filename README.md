@@ -5,7 +5,7 @@
 
 ## Testing
 
-El proyecto incluye una base mínima de tests automatizados con `deno test` para lógica de negocio crítica:
+El proyecto incluye una base mínima de tests automatizados con `node --test` (compilando TypeScript con `tsc`) para lógica de negocio crítica:
 
 - aceptación/transiciones de viaje
 - cálculo de tarifa y split de comisión

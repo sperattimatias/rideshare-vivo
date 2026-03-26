@@ -3,7 +3,6 @@ import { AppError } from './errors';
 interface ClientEnv {
   supabaseUrl: string;
   supabaseAnonKey: string;
-  appUrl: string;
 }
 
 function requireValue(value: string | undefined, key: string): string {
@@ -22,7 +21,6 @@ function requireValue(value: string | undefined, key: string): string {
 export function getClientEnv(): ClientEnv {
   const supabaseUrl = requireValue(import.meta.env.VITE_SUPABASE_URL, 'VITE_SUPABASE_URL');
   const supabaseAnonKey = requireValue(import.meta.env.VITE_SUPABASE_ANON_KEY, 'VITE_SUPABASE_ANON_KEY');
-  const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
 
-  return { supabaseUrl, supabaseAnonKey, appUrl };
+  return { supabaseUrl, supabaseAnonKey };
 }

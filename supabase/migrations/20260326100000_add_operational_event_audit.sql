@@ -19,7 +19,9 @@ CREATE INDEX IF NOT EXISTS idx_operational_events_entity_created_at
 
 ALTER TABLE operational_events ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Admins can view operational events"
+DROP POLICY IF EXISTS "Admins can view operational events" ON operational_events;
+
+CREATE POLICY "Admins can view operational events"
   ON operational_events FOR SELECT
   TO authenticated
   USING (
