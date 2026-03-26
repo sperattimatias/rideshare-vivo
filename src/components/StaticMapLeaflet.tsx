@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import type { Coordinates } from '../lib/maps';
-import type { Marker as LeafletMarker } from 'leaflet';
+import type { Map as LeafletMapInstance, Marker as LeafletMarker, Polyline as LeafletPolyline } from 'leaflet';
 
 interface Marker {
   coordinates: Coordinates;
@@ -27,9 +27,9 @@ export function StaticMapLeaflet({
   height = '300px',
 }: StaticMapLeafletProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<unknown>(null);
+  const mapInstanceRef = useRef<LeafletMapInstance | null>(null);
   const markersRef = useRef<LeafletMarker[]>([]);
-  const polylineRef = useRef<unknown>(null);
+  const polylineRef = useRef<LeafletPolyline | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -79,6 +79,8 @@ export function StaticMapLeaflet({
     }
 
     markers.forEach((markerData) => {
+      const map = mapInstanceRef.current;
+      if (!map) return;
       const colorMap = {
         green: '#22c55e',
         red: '#ef4444',
@@ -102,18 +104,20 @@ export function StaticMapLeaflet({
       });
 
       const marker = L.marker([markerData.coordinates.lat, markerData.coordinates.lon], { icon })
-        .addTo(mapInstanceRef.current);
+        .addTo(map);
 
       markersRef.current.push(marker);
     });
 
     if (path.length > 1) {
+      const map = mapInstanceRef.current;
+      if (!map) return;
       const pathCoords = path.map((coord) => [coord.lat, coord.lon] as [number, number]);
       polylineRef.current = L.polyline(pathCoords, {
         color: '#3b82f6',
         weight: 4,
         opacity: 0.7,
-      }).addTo(mapInstanceRef.current);
+      }).addTo(map);
     }
 
     if (markers.length > 0 || path.length > 0) {

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import { Send, Paperclip, AlertCircle, Clock, CheckCheck, Headphones, Zap } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import type { Database } from '../lib/database.types';
 import { Button } from './Button';
 
 interface Message {
@@ -14,6 +16,9 @@ interface Message {
   created_at: string;
   sender_name?: string;
 }
+
+type SupportMessageRow = Database['public']['Tables']['support_conversation_messages']['Row'];
+type ConversationRow = Database['public']['Tables']['support_conversations']['Row'];
 
 interface AgentInfo {
   id: string;
@@ -46,6 +51,34 @@ export function ChatBox({
   const [showNotification, setShowNotification] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const fetchProfileNames = async (userIds: string[]): Promise<Map<string, string>> => {
+    if (userIds.length === 0) return new Map();
+
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('id, full_name')
+      .in('id', userIds);
+
+    if (error) throw error;
+
+    return new Map((data ?? []).map((profile) => [profile.id, profile.full_name]));
+  };
+
+  const toMessageViewModel = (
+    message: SupportMessageRow,
+    senderNames: Map<string, string>
+  ): Message => ({
+    id: message.id,
+    sender_id: message.sender_id,
+    sender_type: message.sender_type,
+    message: message.message,
+    message_type: message.message_type,
+    is_internal_note: message.is_internal_note,
+    read_at: message.read_at,
+    created_at: message.created_at,
+    sender_name: senderNames.get(message.sender_id) ?? 'Usuario',
+  });
+
   useEffect(() => {
     fetchConversationInfo();
     fetchMessages();
@@ -68,26 +101,24 @@ export function ChatBox({
     try {
       const { data: conversation } = await supabase
         .from('support_conversations')
-        .select(`
-          assigned_agent_id,
-          user_profiles!support_conversations_assigned_agent_id_fkey (
-            id,
-            full_name,
-            role
-          )
-        `)
+        .select('assigned_agent_id')
         .eq('id', conversationId)
-        .single();
+        .maybeSingle();
 
-      const assignedProfile = Array.isArray(conversation?.user_profiles)
-        ? conversation.user_profiles[0]
-        : conversation?.user_profiles;
+      const typedConversation = conversation as Pick<ConversationRow, 'assigned_agent_id'> | null;
+      if (!typedConversation?.assigned_agent_id) return;
+
+      const { data: assignedProfile } = await supabase
+        .from('user_profiles')
+        .select('id, full_name')
+        .eq('id', typedConversation.assigned_agent_id)
+        .maybeSingle();
 
       if (assignedProfile) {
         setAgent({
           id: assignedProfile.id,
           full_name: assignedProfile.full_name,
-          role: assignedProfile.role || 'Agente de Soporte',
+          role: 'Agente de Soporte',
         });
       }
     } catch (error) {
@@ -99,21 +130,15 @@ export function ChatBox({
     try {
       const { data, error } = await supabase
         .from('support_conversation_messages')
-        .select(`
-          *,
-          user_profiles!support_conversation_messages_sender_id_fkey (
-            full_name
-          )
-        `)
+        .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-
-      const messagesWithNames = (data || []).map((msg: unknown) => ({
-        ...msg,
-        sender_name: msg.user_profiles?.full_name || 'Usuario',
-      }));
+      const messageRows = data ?? [];
+      const senderIds = [...new Set(messageRows.map((msg) => msg.sender_id))];
+      const senderNames = await fetchProfileNames(senderIds);
+      const messagesWithNames = messageRows.map((msg) => toMessageViewModel(msg, senderNames));
 
       setMessages(messagesWithNames);
       markMessagesAsRead();
@@ -139,17 +164,17 @@ export function ChatBox({
           table: 'support_conversation_messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        async (payload: unknown) => {
+        async (payload: RealtimePostgresInsertPayload<SupportMessageRow>) => {
           const { data: userData } = await supabase
             .from('user_profiles')
             .select('full_name')
             .eq('id', payload.new.sender_id)
-            .single();
+            .maybeSingle();
 
-          const newMsg = {
-            ...payload.new,
-            sender_name: userData?.full_name || 'Usuario',
-          };
+          const newMsg = toMessageViewModel(
+            payload.new,
+            new Map([[payload.new.sender_id, userData?.full_name ?? 'Usuario']])
+          );
 
           setMessages((prev) => {
             const exists = prev.some(msg => msg.id === newMsg.id);
@@ -227,23 +252,16 @@ export function ChatBox({
             is_internal_note: false,
           },
         ])
-        .select(`
-          *,
-          user_profiles!support_conversation_messages_sender_id_fkey (
-            full_name
-          )
-        `)
+        .select('*')
         .single();
 
       if (error) throw error;
+      const senderNames = await fetchProfileNames([data.sender_id]);
 
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === tempId
-            ? {
-                ...data,
-                sender_name: data.user_profiles?.full_name || 'Usuario'
-              }
+            ? toMessageViewModel(data, senderNames)
             : msg
         )
       );

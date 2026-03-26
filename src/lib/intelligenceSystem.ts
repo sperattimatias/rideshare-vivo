@@ -1,24 +1,29 @@
 import { supabase } from './supabase';
 import { calculateDistanceKm, calculateEstimatedDurationMinutes } from './geo';
 import { fromDbGeographyPoint } from './geospatial';
+import type { Database, Json } from './database.types';
 
 export interface DriverScore {
+  id: string;
   driver_id: string;
   score: number;
-  acceptance_rate: number;
-  cancellation_rate: number;
-  completion_rate: number;
-  average_rating: number;
-  total_trips: number;
-  incident_count: number;
-  days_since_last_incident: number;
-  last_calculated: string;
+  metrics: Json;
+  calculated_at: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MatchingConfig {
   id: string;
-  name: string;
+  city: string;
+  max_search_radius_km: number;
+  max_wait_time_seconds: number;
+  score_weights: Json;
+  trust_mode_bonus: number;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  // Campos de UI legacy
   distance_weight: number;
   score_weight: number;
   rating_weight: number;
@@ -44,24 +49,103 @@ export interface IntelligentAlert {
   alert_type: string;
   severity: string;
   entity_type: string;
-  entity_id?: string;
+  entity_id: string;
   title: string;
   description: string;
-  data?: unknown;
+  data: Json | null;
   is_resolved: boolean;
+  resolved_at: string | null;
+  resolved_by: string | null;
   created_at: string;
 }
 
 export interface DemandAnalytics {
+  id: string;
   zone_name: string;
+  demand_level: number;
+  active_drivers: number;
+  requested_trips: number;
+  avg_wait_time_seconds: number;
+  timestamp_hour: string;
+  created_at: string;
+  // Campos derivados para UI legacy
   latitude: number;
   longitude: number;
   date: string;
   hour: number;
   trip_count: number;
-  avg_wait_time_seconds: number;
   avg_fare: number;
 }
+
+interface ScoreWeights {
+  distance_weight: number;
+  score_weight: number;
+  rating_weight: number;
+  history_weight: number;
+  min_score_threshold: number;
+  trust_mode_threshold: number;
+}
+
+interface DriverAvailabilityRow {
+  id: string;
+  user_id: string;
+  current_location: string | null;
+  vehicle_brand: string | null;
+  vehicle_model: string | null;
+  vehicle_plate: string | null;
+}
+
+const isJsonObject = (value: Json): value is Record<string, Json> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const getNumber = (obj: Record<string, Json>, key: string, fallback: number): number => {
+  const value = obj[key];
+  return typeof value === 'number' ? value : fallback;
+};
+
+const parseScoreWeights = (value: Json): ScoreWeights => {
+  if (!isJsonObject(value)) {
+    return {
+      distance_weight: 0.35,
+      score_weight: 0.35,
+      rating_weight: 0.2,
+      history_weight: 0.1,
+      min_score_threshold: 0,
+      trust_mode_threshold: 80,
+    };
+  }
+
+  return {
+    distance_weight: getNumber(value, 'distance_weight', 0.35),
+    score_weight: getNumber(value, 'score_weight', 0.35),
+    rating_weight: getNumber(value, 'rating_weight', 0.2),
+    history_weight: getNumber(value, 'history_weight', 0.1),
+    min_score_threshold: getNumber(value, 'min_score_threshold', 0),
+    trust_mode_threshold: getNumber(value, 'trust_mode_threshold', 80),
+  };
+};
+
+const mapMatchingConfigRow = (
+  row: Database['public']['Tables']['matching_config']['Row']
+): MatchingConfig => {
+  const weights = parseScoreWeights(row.score_weights);
+  return {
+    ...row,
+    distance_weight: weights.distance_weight,
+    score_weight: weights.score_weight,
+    rating_weight: weights.rating_weight,
+    history_weight: weights.history_weight,
+    min_score_threshold: weights.min_score_threshold,
+    trust_mode_threshold: weights.trust_mode_threshold,
+    max_distance_km: row.max_search_radius_km,
+  };
+};
+
+const getAverageRatingFromMetrics = (metrics: Json): number => {
+  if (!isJsonObject(metrics)) return 5;
+  const rating = metrics.average_rating;
+  return typeof rating === 'number' ? rating : 5;
+};
 
 // DRIVER SCORE MANAGEMENT
 
@@ -71,7 +155,7 @@ export async function calculateDriverScore(driverId: string): Promise<number> {
   });
 
   if (error) throw error;
-  return data;
+  return typeof data === 'number' ? data : 0;
 }
 
 export async function getDriverScore(driverId: string): Promise<DriverScore | null> {
@@ -105,32 +189,58 @@ export async function getActiveMatchingConfig(): Promise<MatchingConfig | null> 
     .maybeSingle();
 
   if (error) throw error;
-  return data;
+  return data ? mapMatchingConfigRow(data) : null;
 }
 
 export async function updateMatchingConfig(
   configId: string,
   updates: Partial<MatchingConfig>
 ): Promise<MatchingConfig> {
+  const scoreWeights = {
+    distance_weight: updates.distance_weight,
+    score_weight: updates.score_weight,
+    rating_weight: updates.rating_weight,
+    history_weight: updates.history_weight,
+    min_score_threshold: updates.min_score_threshold,
+    trust_mode_threshold: updates.trust_mode_threshold,
+  };
+
+  const dbUpdates: Database['public']['Tables']['matching_config']['Update'] = {
+    city: updates.city,
+    max_search_radius_km: updates.max_distance_km ?? updates.max_search_radius_km,
+    max_wait_time_seconds: updates.max_wait_time_seconds,
+    trust_mode_bonus: updates.trust_mode_bonus,
+    is_active: updates.is_active,
+  };
+
+  if (Object.values(scoreWeights).some((value) => typeof value === 'number')) {
+    dbUpdates.score_weights = {
+      distance_weight: scoreWeights.distance_weight ?? 0.35,
+      score_weight: scoreWeights.score_weight ?? 0.35,
+      rating_weight: scoreWeights.rating_weight ?? 0.2,
+      history_weight: scoreWeights.history_weight ?? 0.1,
+      min_score_threshold: scoreWeights.min_score_threshold ?? 0,
+      trust_mode_threshold: scoreWeights.trust_mode_threshold ?? 80,
+    };
+  } else if (updates.score_weights) {
+    dbUpdates.score_weights = updates.score_weights;
+  }
+
   const { data, error } = await supabase
     .from('matching_config')
-    .update(updates)
+    .update(dbUpdates)
     .eq('id', configId)
     .select()
     .single();
 
   if (error) throw error;
-  return data;
+  return mapMatchingConfigRow(data);
 }
 
 export async function setActiveConfig(configId: string): Promise<void> {
-  // Deactivate all configs
   await supabase.from('matching_config').update({ is_active: false }).neq('id', '');
-
-  // Activate selected config
   await supabase.from('matching_config').update({ is_active: true }).eq('id', configId);
 }
-
 
 export async function findBestDriverMatch(
   passengerLat: number,
@@ -141,21 +251,18 @@ export async function findBestDriverMatch(
   const config = await getActiveMatchingConfig();
   if (!config) throw new Error('No active matching configuration');
 
-  // Get available drivers
+  const weights = parseScoreWeights(config.score_weights);
+
   const { data: availableDrivers } = await supabase
     .from('drivers')
-    .select(
-      `
+    .select(`
       id,
       user_id,
       current_location,
       vehicle_brand,
       vehicle_model,
-      vehicle_plate,
-      user_profiles!inner(full_name),
-      driver_scores!inner(score, average_rating)
-    `
-    )
+      vehicle_plate
+    `)
     .eq('status', 'ACTIVE')
     .eq('is_online', true)
     .eq('is_on_trip', false);
@@ -164,88 +271,75 @@ export async function findBestDriverMatch(
     return [];
   }
 
-  // Get passenger trip history with drivers
   const { data: tripHistory } = await supabase
     .from('trips')
-    .select('driver_id, status')
+    .select('driver_id')
     .eq('passenger_id', passengerId)
     .eq('status', 'COMPLETED');
 
   const driverTripCounts = new Map<string, number>();
   tripHistory?.forEach((trip) => {
     if (trip.driver_id) {
-      driverTripCounts.set(trip.driver_id, (driverTripCounts.get(trip.driver_id) || 0) + 1);
+      driverTripCounts.set(trip.driver_id, (driverTripCounts.get(trip.driver_id) ?? 0) + 1);
     }
   });
 
-  // Calculate matching scores
   const matches: DriverMatch[] = [];
 
-  for (const driver of availableDrivers) {
-    const scoreData = Array.isArray(driver.driver_scores)
-      ? driver.driver_scores[0]
-      : driver.driver_scores;
-    const driverScore = scoreData?.score || 0;
-    const driverRating = scoreData?.average_rating || 5.0;
+  const driverIds = availableDrivers.map((driver) => driver.id);
+  const driverUserIds = availableDrivers.map((driver) => driver.user_id);
+  const [{ data: scoreRows }, { data: profileRows }] = await Promise.all([
+    supabase.from('driver_scores').select('driver_id, score, metrics').in('driver_id', driverIds),
+    supabase.from('user_profiles').select('id, full_name').in('id', driverUserIds),
+  ]);
+  const scoreByDriverId = new Map((scoreRows ?? []).map((row) => [row.driver_id, row]));
+  const nameByUserId = new Map((profileRows ?? []).map((row) => [row.id, row.full_name]));
 
-    // Apply trust mode filter
-    if (trustModeEnabled && driverScore < config.trust_mode_threshold) {
+  for (const driver of (availableDrivers ?? []) as DriverAvailabilityRow[]) {
+    const scoreData = scoreByDriverId.get(driver.id);
+    const driverScore = scoreData?.score ?? 0;
+    const driverRating = scoreData ? getAverageRatingFromMetrics(scoreData.metrics) : 5;
+
+    if (trustModeEnabled && driverScore < weights.trust_mode_threshold) {
       continue;
     }
 
-    // Apply minimum score threshold
-    if (driverScore < config.min_score_threshold) {
+    if (driverScore < weights.min_score_threshold) {
       continue;
     }
 
-    // Calculate distance
     const location = fromDbGeographyPoint(driver.current_location);
     if (!location) continue;
 
-    const distance = calculateDistanceKm(
-      passengerLat,
-      passengerLon,
-      location.lat,
-      location.lon
-    );
+    const distance = calculateDistanceKm(passengerLat, passengerLon, location.lat, location.lon);
 
-    // Skip if too far
-    if (distance > config.max_distance_km) {
+    if (distance > config.max_search_radius_km) {
       continue;
     }
 
-    // Calculate component scores (normalized 0-100)
-    const distanceScore = Math.max(0, 100 - (distance / config.max_distance_km) * 100);
-    const scoreComponent = driverScore;
-    const ratingScore = (driverRating / 5.0) * 100;
-    const historyCount = driverTripCounts.get(driver.id) || 0;
-    const historyScore = Math.min(100, historyCount * 20); // +20 per previous trip, max 100
+    const distanceScore = Math.max(0, 100 - (distance / config.max_search_radius_km) * 100);
+    const ratingScore = (driverRating / 5) * 100;
+    const historyCount = driverTripCounts.get(driver.id) ?? 0;
+    const historyScore = Math.min(100, historyCount * 20);
 
-    // Weighted matching score
     const matchingScore =
-      distanceScore * config.distance_weight +
-      scoreComponent * config.score_weight +
-      ratingScore * config.rating_weight +
-      historyScore * config.history_weight;
-
-    const eta = calculateEstimatedDurationMinutes(distance);
-    const profile = Array.isArray(driver.user_profiles)
-      ? driver.user_profiles[0]
-      : driver.user_profiles;
+      distanceScore * weights.distance_weight +
+      driverScore * weights.score_weight +
+      ratingScore * weights.rating_weight +
+      historyScore * weights.history_weight;
 
     matches.push({
       driver_id: driver.id,
-      driver_name: profile?.full_name || 'Conductor',
-      vehicle_info: `${driver.vehicle_brand} ${driver.vehicle_model} - ${driver.vehicle_plate}`,
+      driver_name: nameByUserId.get(driver.user_id) ?? 'Conductor',
+      vehicle_info: `${driver.vehicle_brand ?? ''} ${driver.vehicle_model ?? ''} - ${driver.vehicle_plate ?? ''}`.trim(),
       distance_km: Math.round(distance * 100) / 100,
       score: driverScore,
       rating: driverRating,
       matching_score: Math.round(matchingScore * 100) / 100,
-      eta_minutes: eta,
+      eta_minutes: calculateEstimatedDurationMinutes(distance),
     });
   }
 
-  // Sort by matching score (highest first)
   matches.sort((a, b) => b.matching_score - a.matching_score);
 
   return matches;
@@ -305,7 +399,7 @@ export async function createManualAlert(
   entityId: string,
   title: string,
   description: string,
-  data?: unknown
+  data?: Json
 ): Promise<IntelligentAlert> {
   const { data: alert, error } = await supabase
     .from('intelligent_alerts')
@@ -329,33 +423,18 @@ export async function createManualAlert(
 
 export async function updateDemandAnalytics(
   zoneName: string,
-  latitude: number,
-  longitude: number,
-  tripCount: number,
-  avgWaitTime: number,
-  avgFare: number
+  demandLevel: number,
+  activeDrivers: number,
+  requestedTrips: number,
+  avgWaitTime: number
 ): Promise<void> {
-  const now = new Date();
-  const date = now.toISOString().split('T')[0];
-  const hour = now.getHours();
-
-  const { error } = await supabase
-    .from('trip_demand_analytics')
-    .upsert(
-      {
-        zone_name: zoneName,
-        latitude,
-        longitude,
-        date,
-        hour,
-        trip_count: tripCount,
-        avg_wait_time_seconds: avgWaitTime,
-        avg_fare: avgFare,
-      },
-      {
-        onConflict: 'zone_name,date,hour',
-      }
-    );
+  const { error } = await supabase.from('trip_demand_analytics').insert({
+    zone_name: zoneName,
+    demand_level: demandLevel,
+    active_drivers: activeDrivers,
+    requested_trips: requestedTrips,
+    avg_wait_time_seconds: avgWaitTime,
+  });
 
   if (error) throw error;
 }
@@ -367,12 +446,20 @@ export async function getDemandHeatmap(
   const { data, error } = await supabase
     .from('trip_demand_analytics')
     .select('*')
-    .gte('date', startDate)
-    .lte('date', endDate)
-    .order('trip_count', { ascending: false });
+    .gte('timestamp_hour', `${startDate}T00:00:00`)
+    .lte('timestamp_hour', `${endDate}T23:59:59`)
+    .order('requested_trips', { ascending: false });
 
   if (error) throw error;
-  return data || [];
+  return (data ?? []).map((row) => ({
+    ...row,
+    latitude: 0,
+    longitude: 0,
+    date: row.timestamp_hour.split('T')[0],
+    hour: new Date(row.timestamp_hour).getHours(),
+    trip_count: row.requested_trips,
+    avg_fare: 0,
+  }));
 }
 
 export async function getDemandByZone(zoneName: string): Promise<DemandAnalytics[]> {
@@ -380,11 +467,19 @@ export async function getDemandByZone(zoneName: string): Promise<DemandAnalytics
     .from('trip_demand_analytics')
     .select('*')
     .eq('zone_name', zoneName)
-    .order('date', { ascending: false })
-    .limit(168); // Last 7 days * 24 hours
+    .order('timestamp_hour', { ascending: false })
+    .limit(168);
 
   if (error) throw error;
-  return data || [];
+  return (data ?? []).map((row) => ({
+    ...row,
+    latitude: 0,
+    longitude: 0,
+    date: row.timestamp_hour.split('T')[0],
+    hour: new Date(row.timestamp_hour).getHours(),
+    trip_count: row.requested_trips,
+    avg_fare: 0,
+  }));
 }
 
 export async function getHotZones(limit: number = 10): Promise<DemandAnalytics[]> {
@@ -394,25 +489,29 @@ export async function getHotZones(limit: number = 10): Promise<DemandAnalytics[]
   const { data, error } = await supabase
     .from('trip_demand_analytics')
     .select('*')
-    .gte('date', weekAgo)
-    .lte('date', today)
-    .order('trip_count', { ascending: false })
+    .gte('timestamp_hour', `${weekAgo}T00:00:00`)
+    .lte('timestamp_hour', `${today}T23:59:59`)
+    .order('requested_trips', { ascending: false })
     .limit(limit);
 
   if (error) throw error;
-  return data || [];
+  return (data ?? []).map((row) => ({
+    ...row,
+    latitude: 0,
+    longitude: 0,
+    date: row.timestamp_hour.split('T')[0],
+    hour: new Date(row.timestamp_hour).getHours(),
+    trip_count: row.requested_trips,
+    avg_fare: 0,
+  }));
 }
-
-// ANALYTICS AGGREGATION (Called periodically)
 
 export async function aggregateTripDemand(date?: string): Promise<void> {
   const targetDate = date || new Date().toISOString().split('T')[0];
 
-  // This would typically be run as a scheduled job
-  // For now, it's a placeholder for the aggregation logic
   const { data: trips } = await supabase
     .from('trips')
-    .select('origin_latitude, origin_longitude, requested_at, accepted_at, final_fare')
+    .select('origin_latitude, origin_longitude, requested_at, accepted_at')
     .gte('requested_at', `${targetDate}T00:00:00`)
     .lt('requested_at', `${targetDate}T23:59:59`)
     .not('origin_latitude', 'is', null)
@@ -420,11 +519,11 @@ export async function aggregateTripDemand(date?: string): Promise<void> {
 
   if (!trips || trips.length === 0) return;
 
-  // Simple zone detection (would be more sophisticated in production)
-  const zones = new Map<string, { trips: unknown[]; lat: number; lon: number }>();
+  const zones = new Map<string, { trips: Array<{ requested_at: string; accepted_at: string | null }>; lat: number; lon: number }>();
 
   trips.forEach((trip) => {
-    // Round to 2 decimals for zone grouping (~1km precision)
+    if (trip.origin_latitude === null || trip.origin_longitude === null) return;
+
     const zoneLat = Math.round(trip.origin_latitude * 100) / 100;
     const zoneLon = Math.round(trip.origin_longitude * 100) / 100;
     const zoneKey = `${zoneLat},${zoneLon}`;
@@ -432,46 +531,39 @@ export async function aggregateTripDemand(date?: string): Promise<void> {
     if (!zones.has(zoneKey)) {
       zones.set(zoneKey, {
         trips: [],
-        lat: trip.origin_latitude,
-        lon: trip.origin_longitude,
+        lat: zoneLat,
+        lon: zoneLon,
       });
     }
-    zones.get(zoneKey)!.trips.push(trip);
+
+    zones.get(zoneKey)?.trips.push({
+      requested_at: trip.requested_at,
+      accepted_at: trip.accepted_at,
+    });
   });
 
-  // Aggregate by hour for each zone
   for (const [zoneKey, zoneData] of zones) {
-    const hourlyData = new Map<number, typeof trips>();
+    const hourlyData = new Map<number, Array<{ requested_at: string; accepted_at: string | null }>>();
 
     zoneData.trips.forEach((trip) => {
       const hour = new Date(trip.requested_at).getHours();
       if (!hourlyData.has(hour)) {
         hourlyData.set(hour, []);
       }
-      hourlyData.get(hour)!.push(trip);
+      hourlyData.get(hour)?.push(trip);
     });
 
     for (const [, hourTrips] of hourlyData) {
-      const avgWait =
-        hourTrips
-          .filter((t) => t.accepted_at)
-          .reduce((sum, t) => {
-            const wait =
-              (new Date(t.accepted_at).getTime() - new Date(t.requested_at).getTime()) / 1000;
-            return sum + wait;
-          }, 0) / hourTrips.length || 0;
+      const acceptedTrips = hourTrips.filter((trip) => trip.accepted_at !== null);
+      const totalWaitSeconds = acceptedTrips.reduce((sum, trip) => {
+        if (!trip.accepted_at) return sum;
+        return sum + (new Date(trip.accepted_at).getTime() - new Date(trip.requested_at).getTime()) / 1000;
+      }, 0);
 
-      const avgFare =
-        hourTrips.reduce((sum, t) => sum + (t.final_fare || 0), 0) / hourTrips.length || 0;
+      const avgWait = acceptedTrips.length > 0 ? totalWaitSeconds / acceptedTrips.length : 0;
+      const demandLevel = Math.max(0, Math.min(100, Math.round(hourTrips.length * 10)));
 
-      await updateDemandAnalytics(
-        `Zone ${zoneKey}`,
-        zoneData.lat,
-        zoneData.lon,
-        hourTrips.length,
-        Math.round(avgWait),
-        Math.round(avgFare * 100) / 100
-      );
+      await updateDemandAnalytics(`Zone ${zoneKey}`, demandLevel, 0, hourTrips.length, Math.round(avgWait));
     }
   }
 }
@@ -490,18 +582,14 @@ export async function getSystemHealthMetrics() {
       .gte('created_at', hourAgo.toISOString()),
     supabase.from('driver_scores').select('count').lt('score', 70),
     supabase.from('trips').select('count').in('status', ['REQUESTED', 'ACCEPTED', 'IN_PROGRESS']),
-    supabase
-      .from('drivers')
-      .select('count')
-      .eq('is_online', true)
-      .eq('status', 'ACTIVE'),
+    supabase.from('drivers').select('count').eq('is_online', true).eq('status', 'ACTIVE'),
   ]);
 
   return {
-    unresolved_alerts: unresolvedAlerts.data?.[0]?.count || 0,
-    low_score_drivers: lowScoreDrivers.data?.[0]?.count || 0,
-    active_trips: activeTrips.data?.[0]?.count || 0,
-    online_drivers: onlineDrivers.data?.[0]?.count || 0,
+    unresolved_alerts: unresolvedAlerts.count ?? 0,
+    low_score_drivers: lowScoreDrivers.count ?? 0,
+    active_trips: activeTrips.count ?? 0,
+    online_drivers: onlineDrivers.count ?? 0,
     timestamp: now.toISOString(),
   };
 }

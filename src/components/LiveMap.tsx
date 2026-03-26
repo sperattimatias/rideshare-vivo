@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Car, User, MapPin, Navigation } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { fromDbGeographyPoint } from '../lib/geospatial';
+import type { Database } from '../lib/database.types';
 
 interface Driver {
   id: string;
@@ -13,7 +14,7 @@ interface Driver {
   latitude: number;
   longitude: number;
   is_on_trip: boolean;
-  status: string;
+  status: Database['public']['Tables']['drivers']['Row']['status'];
 }
 
 interface WaitingTrip {
@@ -85,24 +86,34 @@ export function LiveMap({ className = '' }: LiveMapProps) {
         .from('drivers')
         .select(`
           id,
+          user_id,
           is_on_trip,
           status,
           vehicle_brand,
           vehicle_model,
           vehicle_color,
           vehicle_plate,
-          current_location,
-          user_profiles!drivers_user_id_fkey (
-            full_name
-          )
+          current_location
         `)
         .eq('is_online', true)
         .not('current_location', 'is', null);
 
       if (driversError) throw driversError;
 
-      const mappedDrivers = (driversData || [])
-        .map((d: unknown) => {
+      type DriverBase = Pick<
+        Database['public']['Tables']['drivers']['Row'],
+        'id' | 'user_id' | 'is_on_trip' | 'status' | 'vehicle_brand' | 'vehicle_model' | 'vehicle_color' | 'vehicle_plate' | 'current_location'
+      >;
+      const driverRows = (driversData ?? []) as DriverBase[];
+      const driverProfileIds = [...new Set(driverRows.map((driver) => driver.user_id))];
+      const { data: driverProfiles } = await supabase
+        .from('user_profiles')
+        .select('id, full_name')
+        .in('id', driverProfileIds);
+      const driverNames = new Map((driverProfiles ?? []).map((profile) => [profile.id, profile.full_name]));
+
+      const mappedDrivers = driverRows
+        .map((d) => {
           if (!d.current_location) return null;
 
           const coords = fromDbGeographyPoint(d.current_location);
@@ -110,7 +121,7 @@ export function LiveMap({ className = '' }: LiveMapProps) {
 
           return {
             id: d.id,
-            full_name: d.user_profiles?.full_name || 'Conductor',
+            full_name: driverNames.get(d.user_id) || 'Conductor',
             vehicle_brand: d.vehicle_brand,
             vehicle_model: d.vehicle_model,
             vehicle_color: d.vehicle_color,
@@ -121,7 +132,7 @@ export function LiveMap({ className = '' }: LiveMapProps) {
             status: d.status,
           };
         })
-        .filter((d): d is Driver => d !== null);
+        .filter((driver): driver is Driver => driver !== null);
 
       setDrivers(mappedDrivers);
 
@@ -129,15 +140,11 @@ export function LiveMap({ className = '' }: LiveMapProps) {
         .from('trips')
         .select(`
           id,
+          passenger_id,
           origin_address,
           origin_latitude,
           origin_longitude,
-          requested_at,
-          passengers!trips_passenger_id_fkey (
-            user_profiles!passengers_user_id_fkey (
-              full_name
-            )
-          )
+          requested_at
         `)
         .in('status', ['REQUESTED', 'ACCEPTED'])
         .not('origin_latitude', 'is', null)
@@ -146,9 +153,27 @@ export function LiveMap({ className = '' }: LiveMapProps) {
 
       if (tripsError) throw tripsError;
 
-      const mappedTrips = (tripsData || []).map((t: unknown) => ({
+      type TripBase = Pick<
+        Database['public']['Tables']['trips']['Row'],
+        'id' | 'passenger_id' | 'origin_address' | 'origin_latitude' | 'origin_longitude' | 'requested_at'
+      >;
+      const tripRows = (tripsData ?? []) as TripBase[];
+      const passengerIds = [...new Set(tripRows.map((trip) => trip.passenger_id))];
+      const { data: passengers } = await supabase
+        .from('passengers')
+        .select('id, user_id')
+        .in('id', passengerIds);
+      const passengerUserIds = [...new Set((passengers ?? []).map((passenger) => passenger.user_id))];
+      const { data: passengerProfiles } = await supabase
+        .from('user_profiles')
+        .select('id, full_name')
+        .in('id', passengerUserIds);
+      const passengerNamesByUserId = new Map((passengerProfiles ?? []).map((profile) => [profile.id, profile.full_name]));
+      const passengerUserByPassengerId = new Map((passengers ?? []).map((passenger) => [passenger.id, passenger.user_id]));
+
+      const mappedTrips = tripRows.map((t) => ({
         id: t.id,
-        passenger_name: t.passengers?.user_profiles?.full_name || 'Pasajero',
+        passenger_name: passengerNamesByUserId.get(passengerUserByPassengerId.get(t.passenger_id) ?? '') || 'Pasajero',
         origin_address: t.origin_address,
         origin_latitude: Number(t.origin_latitude),
         origin_longitude: Number(t.origin_longitude),

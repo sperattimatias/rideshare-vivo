@@ -1,23 +1,13 @@
 import { useState, useEffect } from 'react';
+import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import type { Database } from './database.types';
+import { mapNotificationRowToUI, type UINotification } from './notificationModels';
 
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  icon: string | null;
-  color: string;
-  link: string | null;
-  is_read: boolean;
-  read_at: string | null;
-  created_at: string;
-  play_sound: boolean;
-  priority: string;
-}
+type NotificationRow = Database['public']['Tables']['notifications']['Row'];
 
 export function useNotifications(userId: string | undefined) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<UINotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -50,7 +40,7 @@ export function useNotifications(userId: string | undefined) {
         .limit(50);
 
       if (error) throw error;
-      setNotifications(data || []);
+      setNotifications((data ?? []).map(mapNotificationRowToUI));
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -71,8 +61,8 @@ export function useNotifications(userId: string | undefined) {
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
-          const newNotification = payload.new as Notification;
+        (payload: RealtimePostgresInsertPayload<NotificationRow>) => {
+          const newNotification = mapNotificationRowToUI(payload.new);
           setNotifications((prev) => [newNotification, ...prev]);
         }
       )
