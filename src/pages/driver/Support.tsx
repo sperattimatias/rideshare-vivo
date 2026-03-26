@@ -7,10 +7,7 @@ import { Textarea } from '../../components/Textarea';
 import { ChatBox } from '../../components/ChatBox';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  fetchDepartments,
-  fetchCategories,
   createConversation,
-  fetchUserConversations,
   rateConversation,
   getPriorityColor,
   getStatusColor,
@@ -19,6 +16,7 @@ import {
   type SupportCategory,
   type SupportConversation,
 } from '../../lib/supportSystem';
+import { loadSupportPageData } from '../../services/support/supportPageService';
 
 interface SupportProps {
   onBack: () => void;
@@ -61,14 +59,9 @@ export function Support({ onBack }: SupportProps) {
     if (!user) return;
 
     try {
-      const [convs, , cats] = await Promise.all([
-        fetchUserConversations(user.id),
-        fetchDepartments(),
-        fetchCategories(),
-      ]);
-
-      setConversations(convs);
-      setCategories(cats);
+      const data = await loadSupportPageData(user.id);
+      setConversations(data.conversations);
+      setCategories(data.categories);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {

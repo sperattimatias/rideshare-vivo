@@ -3,20 +3,18 @@ import { MapPin, Clock, DollarSign, User, Navigation, CheckCircle, XCircle } fro
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { FeedbackBanner } from '../../components/FeedbackBanner';
-import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { calculateDistanceKm, formatDistance, isValidCoordinate } from '../../lib/geo';
 import { calculateDriverEarnings } from '../../lib/pricing';
-import { fromDbGeographyPoint } from '../../lib/geospatial';
 import { getTraceId, logClientError, logOperationalEvent } from '../../lib/observability';
+import {
+  acceptTrip,
+  getDriverLocation,
+  getPendingTripRequests,
+  type TripWithDetails,
+} from '../../services/trips/tripRequestService';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
-type PassengerRow = Database['public']['Tables']['passengers']['Row'];
-type UserProfileRow = Database['public']['Tables']['user_profiles']['Row'];
-
-interface TripWithDetails extends TripRow {
-  passenger?: PassengerRow & { user_profile?: UserProfileRow };
-}
 
 interface TripRequestsProps {
   driverId: string;
@@ -46,22 +44,8 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
 
   const fetchDriverLocation = async () => {
     try {
-      const { data, error } = await supabase
-        .from('drivers')
-        .select('current_location')
-        .eq('id', driverId)
-        .single();
-
-      if (error) throw error;
-
-      if (data?.current_location) {
-        const location = fromDbGeographyPoint(data.current_location);
-        if (location && isValidCoordinate(location.lat, location.lon)) {
-          setDriverLocation(location);
-        } else {
-          setDriverLocation(null);
-        }
-      }
+      const location = await getDriverLocation(driverId);
+      setDriverLocation(location);
     } catch (error) {
       console.error('Error fetching driver location:', error);
       setDriverLocation(null);
@@ -70,22 +54,8 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
 
   const fetchTripRequests = async () => {
     try {
-      const { data, error } = await supabase
-        .from('trips')
-        .select(`
-          *,
-          passenger:passengers(
-            *,
-            user_profile:user_profiles(*)
-          )
-        `)
-        .eq('status', 'REQUESTED')
-        .is('driver_id', null)
-        .order('requested_at', { ascending: true })
-        .limit(5);
-
-      if (error) throw error;
-      setRequests(data as TripWithDetails[]);
+      const data = await getPendingTripRequests();
+      setRequests(data);
     } catch (error) {
       console.error('Error fetching trip requests:', error);
     } finally {
@@ -97,14 +67,7 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
     setAccepting(tripId);
 
     try {
-      const { data, error } = await supabase
-        .rpc('accept_trip', {
-          p_trip_id: tripId,
-        });
-
-      if (error) throw error;
-
-      const result = data?.[0];
+      const result = await acceptTrip(tripId);
       if (!result?.success) {
         const traceId = getTraceId();
         setFeedback({
