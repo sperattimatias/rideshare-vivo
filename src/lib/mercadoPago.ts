@@ -4,38 +4,41 @@ export interface MercadoPagoPreference {
   id: string;
   init_point: string;
   sandbox_init_point: string;
+  reused?: boolean;
 }
 
 export interface CreatePaymentPreferenceParams {
   tripId: string;
-  amount: number;
-  driverAmount: number;
-  platformAmount: number;
-  driverSellerId: string;
-  description: string;
 }
 
 export interface PaymentStatus {
   tripId: string;
-  paymentId: string;
+  paymentId: string | null;
   status: 'pending' | 'approved' | 'rejected' | 'refunded' | 'cancelled';
   statusDetail?: string;
 }
 
 export async function createPaymentPreference(
-  params: CreatePaymentPreferenceParams
+  params: CreatePaymentPreferenceParams,
 ): Promise<MercadoPagoPreference> {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !supabaseKey) {
+  if (!supabaseUrl) {
     throw new Error('Configuración de Supabase no encontrada');
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error('No hay sesión activa');
   }
 
   const response = await fetch(`${supabaseUrl}/functions/v1/create-payment-preference`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${supabaseKey}`,
+      Authorization: `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(params),
@@ -43,7 +46,7 @@ export async function createPaymentPreference(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || 'Error al crear preferencia de pago');
+    throw new Error(error.message || error.error || 'Error al crear preferencia de pago');
   }
 
   const data = await response.json();
@@ -54,7 +57,7 @@ export async function getPaymentStatus(tripId: string): Promise<PaymentStatus | 
   try {
     const { data, error } = await supabase
       .from('trip_payments')
-      .select('*')
+      .select('trip_id, mp_payment_id, mp_status, mp_status_detail')
       .eq('trip_id', tripId)
       .maybeSingle();
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Car, MapPin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { fromDbGeographyPoint } from '../lib/geospatial';
 import 'leaflet/dist/leaflet.css';
 
 interface Driver {
@@ -142,7 +143,7 @@ export function LeafletMap({ className = '', center, zoom = 13 }: LeafletMapProp
         .map((d: any) => {
           if (!d.current_location) return null;
 
-          const coords = parsePostGISPoint(d.current_location);
+          const coords = fromDbGeographyPoint(d.current_location);
           if (!coords) return null;
 
           return {
@@ -209,19 +210,6 @@ export function LeafletMap({ className = '', center, zoom = 13 }: LeafletMapProp
       }
     } catch (error) {
       console.error('Error loading map data:', error);
-    }
-  };
-
-  const parsePostGISPoint = (point: string): { lat: number; lon: number } | null => {
-    try {
-      const match = point.match(/POINT\(([^ ]+) ([^ ]+)\)/);
-      if (!match) return null;
-      return {
-        lon: parseFloat(match[1]),
-        lat: parseFloat(match[2]),
-      };
-    } catch {
-      return null;
     }
   };
 

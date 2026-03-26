@@ -95,26 +95,12 @@ export function PayTrip({ tripId, onBack, onPaymentComplete }: PayTripProps) {
       return;
     }
 
-    if (!trip.driver.mp_seller_id) {
-      setError('El conductor no tiene Mercado Pago vinculado');
-      return;
-    }
-
     setProcessing(true);
     setError('');
 
     try {
-      const totalAmount = trip.final_fare;
-      const driverAmount = totalAmount * 0.80;
-      const platformAmount = totalAmount * 0.20;
-
       const preference = await createPaymentPreference({
         tripId: trip.id,
-        amount: totalAmount,
-        driverAmount,
-        platformAmount,
-        driverSellerId: trip.driver.mp_seller_id,
-        description: `Viaje desde ${trip.origin_address} hasta ${trip.destination_address}`,
       });
 
       window.location.href = preference.init_point;
