@@ -5,13 +5,13 @@ import { Card } from '../../components/Card';
 import { AddressAutocomplete } from '../../components/AddressAutocomplete';
 import { StaticMap } from '../../components/StaticMap';
 import { StaticMapLeaflet } from '../../components/StaticMapLeaflet';
-import { STRINGS } from '../../lib/strings';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { calculateRoute, type Coordinates } from '../../lib/maps';
 import { formatDistance, formatDuration } from '../../lib/geo';
 import { calculateFare, getPricingConfig } from '../../lib/pricing';
 import { isPointInServiceZone } from '../../lib/serviceZones';
+import { toDbGeographyPoint } from '../../lib/geospatial';
 
 interface RequestRideProps {
   onBack: () => void;
@@ -125,17 +125,17 @@ export function RequestRide({ onBack, onSuccess }: RequestRideProps) {
       const tripData = {
         passenger_id: passenger.id,
         origin_address: originAddress,
+        origin_location: toDbGeographyPoint(originCoords),
         origin_latitude: originCoords.lat,
         origin_longitude: originCoords.lon,
         destination_address: destinationAddress,
+        destination_location: toDbGeographyPoint(destinationCoords),
         destination_latitude: destinationCoords.lat,
         destination_longitude: destinationCoords.lon,
         status: 'REQUESTED' as const,
         estimated_fare: estimatedFare,
         estimated_distance_km: estimatedDistance,
         estimated_duration_minutes: estimatedDuration,
-        scheduled_for: scheduledFor || undefined,
-        notes: notes.trim() || undefined
       };
 
       const { error: insertError } = await supabase

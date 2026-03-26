@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { calculateDriverEarningsAmount, calculateFareAmount } from './pricingMath';
 
 export interface PricingConfig {
   baseFare: number;
@@ -52,14 +53,11 @@ export async function getPricingConfig(): Promise<PricingConfig> {
 }
 
 export function calculateFare(distanceKm: number, config: PricingConfig): number {
-  if (distanceKm < 0) throw new Error('Distancia inválida');
-  const calculated = config.baseFare + distanceKm * config.perKmRate;
-  const fare = config.minimumFare ? Math.max(calculated, config.minimumFare) : calculated;
-  return Math.round(fare);
+  return calculateFareAmount(distanceKm, config);
 }
 
 export function calculateDriverEarnings(fare: number, platformCommission = 0.20): number {
-  return Math.round(fare * (1 - platformCommission));
+  return calculateDriverEarningsAmount(fare, platformCommission);
 }
 
 export function clearPricingCache() {

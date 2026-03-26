@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CreditCard, CheckCircle, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { FeedbackBanner } from '../../components/FeedbackBanner';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { getClientEnv } from '../../lib/env';
+import { logClientError, logClientEvent, logOperationalEvent, getTraceId } from '../../lib/observability';
 
 interface MercadoPagoConnectProps {
   onComplete: () => void;
@@ -15,6 +18,7 @@ export function MercadoPagoConnect({ onComplete }: MercadoPagoConnectProps) {
   const [error, setError] = useState('');
   const [mpStatus, setMpStatus] = useState<string | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(true);
+  const traceIdRef = useRef(getTraceId());
 
   useEffect(() => {
     checkMercadoPagoStatus();
@@ -30,18 +34,24 @@ export function MercadoPagoConnect({ onComplete }: MercadoPagoConnectProps) {
   }, []);
 
   const checkMercadoPagoStatus = async () => {
+    if (!user?.id) {
+      setMpStatus('PENDING');
+      setCheckingStatus(false);
+      return;
+    }
+
     try {
       const { data: driver, error: driverError } = await supabase
         .from('drivers')
         .select('mp_oauth_status, mp_seller_id')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (driverError) throw driverError;
 
       setMpStatus(driver?.mp_oauth_status || 'PENDING');
     } catch (err) {
-      console.error('Error checking MP status:', err);
+      logClientError('MP_STATUS_CHECK_FAILED', err, { traceId: traceIdRef.current });
       setMpStatus('PENDING');
     } finally {
       setCheckingStatus(false);
@@ -53,17 +63,19 @@ export function MercadoPagoConnect({ onComplete }: MercadoPagoConnectProps) {
     setError('');
 
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Configuración de Supabase no encontrada');
-      }
+      const { supabaseUrl } = getClientEnv();
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('No hay sesión activa');
       }
+
+      await logOperationalEvent({
+        domain: 'OAUTH',
+        action: 'OAUTH_LINK_START_REQUESTED',
+        status: 'SUCCESS',
+        metadata: { traceId: traceIdRef.current },
+      });
 
       const response = await fetch(`${supabaseUrl}/functions/v1/mp-oauth-start`, {
         method: 'POST',
@@ -79,6 +91,7 @@ export function MercadoPagoConnect({ onComplete }: MercadoPagoConnectProps) {
       }
 
       const data = await response.json();
+      logClientEvent('MP_OAUTH_WINDOW_OPENED', { traceId: traceIdRef.current });
 
       const width = 600;
       const height = 700;
@@ -92,8 +105,14 @@ export function MercadoPagoConnect({ onComplete }: MercadoPagoConnectProps) {
       );
 
     } catch (err) {
-      console.error('Error connecting to Mercado Pago:', err);
-      setError((err as Error).message);
+      const appError = logClientError('MP_OAUTH_START_FAILED', err, { traceId: traceIdRef.current });
+      await logOperationalEvent({
+        domain: 'OAUTH',
+        action: 'OAUTH_LINK_START_REQUESTED',
+        status: 'FAILED',
+        metadata: { traceId: traceIdRef.current, reason: appError.code },
+      });
+      setError('No pudimos iniciar la vinculación con Mercado Pago. Intentá nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -157,14 +176,8 @@ export function MercadoPagoConnect({ onComplete }: MercadoPagoConnectProps) {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-red-900">Error al conectar</p>
-              <p className="text-sm text-red-800 mt-1">{error}</p>
-            </div>
-          </div>
+        <div className="mb-6">
+          <FeedbackBanner tone="error" title="Error al conectar" message={`${error} (trace: ${traceIdRef.current.slice(0, 8)})`} />
         </div>
       )}
 

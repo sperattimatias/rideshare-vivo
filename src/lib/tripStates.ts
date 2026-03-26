@@ -109,3 +109,8 @@ export function canDriverCancel(status: TripStatus): boolean {
 export function canPassengerCancel(status: TripStatus): boolean {
   return ['REQUESTED', 'ACCEPTED'].includes(status);
 }
+
+
+export function canAcceptTrip(status: TripStatus): boolean {
+  return status === 'REQUESTED';
+}

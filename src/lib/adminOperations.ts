@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { Json } from './database.types';
 
 export type IncidentType = 'ACCIDENT' | 'COMPLAINT' | 'DISPUTE' | 'FRAUD' | 'SAFETY' | 'HARASSMENT' | 'LOST_ITEM' | 'OTHER';
 export type IncidentSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
@@ -41,23 +42,23 @@ export interface CreateIncidentParams {
   trip_id?: string;
   driver_id?: string;
   passenger_id?: string;
-  metadata?: Record<string, any>;
+  metadata?: Json;
 }
 
 export interface IncidentActionParams {
   incident_id: string;
   action_type: IncidentActionType;
   notes?: string;
-  action_data?: Record<string, any>;
+  action_data?: Json;
 }
 
 export interface AuditLogParams {
   action: string;
   entity_type: AuditEntityType;
   entity_id?: string;
-  old_values?: Record<string, any>;
-  new_values?: Record<string, any>;
-  metadata?: Record<string, any>;
+  old_values?: Json;
+  new_values?: Json;
+  metadata?: Json;
 }
 
 // Get current admin user
@@ -137,7 +138,7 @@ export async function updateIncidentStatus(
     .eq('id', incidentId)
     .single();
 
-  const updateData: any = {
+  const updateData: unknown = {
     status,
     updated_at: new Date().toISOString(),
   };

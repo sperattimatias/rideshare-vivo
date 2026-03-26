@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, MapPin, CreditCard as Edit2, Trash2, Save, X, AlertCircle, Map } from 'lucide-react';
+import { Plus, MapPin, CreditCard as Edit2, Trash2, Save, X, AlertCircle, Map } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
