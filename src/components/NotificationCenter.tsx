@@ -21,7 +21,7 @@ interface NotificationCenterProps {
   onNavigate?: (link: string) => void;
 }
 
-const iconMap: { [key: string]: any } = {
+const iconMap: { [key: string]: unknown } = {
   MessageCircle,
   Car,
   CreditCard,

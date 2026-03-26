@@ -102,7 +102,7 @@ export function LiveMap({ className = '' }: LiveMapProps) {
       if (driversError) throw driversError;
 
       const mappedDrivers = (driversData || [])
-        .map((d: any) => {
+        .map((d: unknown) => {
           if (!d.current_location) return null;
 
           const coords = fromDbGeographyPoint(d.current_location);
@@ -146,7 +146,7 @@ export function LiveMap({ className = '' }: LiveMapProps) {
 
       if (tripsError) throw tripsError;
 
-      const mappedTrips = (tripsData || []).map((t: any) => ({
+      const mappedTrips = (tripsData || []).map((t: unknown) => ({
         id: t.id,
         passenger_name: t.passengers?.user_profiles?.full_name || 'Pasajero',
         origin_address: t.origin_address,

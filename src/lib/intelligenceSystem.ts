@@ -47,7 +47,7 @@ export interface IntelligentAlert {
   entity_id?: string;
   title: string;
   description: string;
-  data?: any;
+  data?: unknown;
   is_resolved: boolean;
   created_at: string;
 }
@@ -305,7 +305,7 @@ export async function createManualAlert(
   entityId: string,
   title: string,
   description: string,
-  data?: any
+  data?: unknown
 ): Promise<IntelligentAlert> {
   const { data: alert, error } = await supabase
     .from('intelligent_alerts')
@@ -421,7 +421,7 @@ export async function aggregateTripDemand(date?: string): Promise<void> {
   if (!trips || trips.length === 0) return;
 
   // Simple zone detection (would be more sophisticated in production)
-  const zones = new Map<string, { trips: any[]; lat: number; lon: number }>();
+  const zones = new Map<string, { trips: unknown[]; lat: number; lon: number }>();
 
   trips.forEach((trip) => {
     // Round to 2 decimals for zone grouping (~1km precision)
@@ -441,7 +441,7 @@ export async function aggregateTripDemand(date?: string): Promise<void> {
 
   // Aggregate by hour for each zone
   for (const [zoneKey, zoneData] of zones) {
-    const hourlyData = new Map<number, any[]>();
+    const hourlyData = new Map<number, typeof trips>();
 
     zoneData.trips.forEach((trip) => {
       const hour = new Date(trip.requested_at).getHours();

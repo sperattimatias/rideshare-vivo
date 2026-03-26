@@ -5,8 +5,7 @@ import { Button } from '../../components/Button';
 import { STRINGS } from '../../lib/strings';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
-import { calculateFare } from '../../lib/pricing';
-import { canTransitionTo, getNextDriverStatus, canDriverCancel, getDriverActionLabel } from '../../lib/tripStates';
+import { canTransitionTo, canDriverCancel } from '../../lib/tripStates';
 import { calculateDriverEarnings } from '../../lib/pricing';
 import { calculateTripCompletion, completeTripTransaction, validateTripCompletion } from '../../lib/tripCompletion';
 import { StaticMapLeaflet } from '../../components/StaticMapLeaflet';
@@ -107,7 +106,7 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
     }
   };
 
-  const updateTripStatus = async (newStatus: TripRow['status'], additionalData?: any) => {
+  const updateTripStatus = async (newStatus: TripRow['status'], additionalData?: unknown) => {
     if (!trip || updating) return;
 
     if (!canTransitionTo(trip.status, newStatus)) {
@@ -117,7 +116,7 @@ export function ActiveTrip({ driverId, onComplete }: ActiveTripProps) {
 
     setUpdating(true);
     try {
-      const updates: any = {
+      const updates: unknown = {
         status: newStatus,
         updated_at: new Date().toISOString(),
         ...additionalData,

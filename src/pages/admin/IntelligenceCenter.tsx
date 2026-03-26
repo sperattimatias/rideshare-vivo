@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Brain, AlertTriangle, TrendingUp, MapPin, Settings, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Card } from '../../components/Card';
-import { AdminLoadingState, AdminEmptyState } from '../../components/admin/AdminStates';
+import { AdminLoadingState } from '../../components/admin/AdminStates';
 import { Button } from '../../components/Button';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { STRINGS } from '../../lib/strings';
@@ -22,7 +22,7 @@ interface IntelligenceCenterProps {
 
 export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) {
   const [alerts, setAlerts] = useState<IntelligentAlert[]>([]);
-  const [healthMetrics, setHealthMetrics] = useState<any>(null);
+  const [healthMetrics, setHealthMetrics] = useState<unknown>(null);
   const [matchingConfig, setMatchingConfig] = useState<MatchingConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<'alerts' | 'matching' | 'health'>('alerts');

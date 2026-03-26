@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, DollarSign, MapPin, Save, AlertCircle, CreditCard, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
-import { AdminLoadingState, AdminEmptyState } from '../../components/admin/AdminStates';
+import { AdminLoadingState } from '../../components/admin/AdminStates';
 import { Input } from '../../components/Input';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { STRINGS } from '../../lib/strings';

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Power, MapPin, Navigation, AlertCircle } from 'lucide-react';
 import { Card } from '../../components/Card';
-import { Button } from '../../components/Button';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { toDbGeographyPoint } from '../../lib/geospatial';
@@ -14,7 +13,6 @@ interface AvailabilityToggleProps {
 }
 
 export function AvailabilityToggle({ driver, onUpdate }: AvailabilityToggleProps) {
-  const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
 

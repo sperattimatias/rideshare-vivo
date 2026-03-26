@@ -19,7 +19,7 @@ const ROSARIO_BOUNDS = {
 };
 
 const CACHE_DURATION_MS = 1000 * 60 * 60;
-const geocodeCache = new Map<string, { result: any; timestamp: number }>();
+const geocodeCache = new Map<string, { result: unknown; timestamp: number }>();
 
 interface NominatimAddress {
   display_name: string;
@@ -67,7 +67,7 @@ export class NominatimProvider implements MapProvider {
     return null;
   }
 
-  private setCachedResult(key: string, result: any): void {
+  private setCachedResult(key: string, result: unknown): void {
     const cacheKey = this.getCacheKey(key);
     geocodeCache.set(cacheKey, {
       result,

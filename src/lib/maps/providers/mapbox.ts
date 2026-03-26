@@ -24,7 +24,7 @@ const ROSARIO_CENTER = {
 };
 
 const CACHE_DURATION_MS = 1000 * 60 * 60;
-const geocodeCache = new Map<string, { result: any; timestamp: number }>();
+const geocodeCache = new Map<string, { result: unknown; timestamp: number }>();
 
 export class MapboxProvider implements MapProvider {
   name = 'mapbox';
@@ -63,7 +63,7 @@ export class MapboxProvider implements MapProvider {
     return null;
   }
 
-  private setCachedResult(key: string, result: any): void {
+  private setCachedResult(key: string, result: unknown): void {
     const cacheKey = this.getCacheKey(key);
     geocodeCache.set(cacheKey, {
       result,
@@ -120,7 +120,7 @@ export class MapboxProvider implements MapProvider {
       }
 
       const validResults = data.features
-        .map((feature: any) => ({
+        .map((feature: unknown) => ({
           id: feature.id,
           displayName: feature.place_name,
           address: feature.place_name,
@@ -129,7 +129,7 @@ export class MapboxProvider implements MapProvider {
             lon: feature.center[0],
           },
         }))
-        .filter((r: any) => this.isInRosarioArea(r.coordinates.lat, r.coordinates.lon));
+        .filter((r: unknown) => this.isInRosarioArea(r.coordinates.lat, r.coordinates.lon));
 
       if (validResults.length === 0) {
         const result: GeocodeResult = {
@@ -273,7 +273,7 @@ export class MapboxProvider implements MapProvider {
       const durationMin = Math.ceil(route.duration / 60);
 
       const steps = options?.steps
-        ? route.legs[0]?.steps?.map((step: any) => ({
+        ? route.legs[0]?.steps?.map((step: unknown) => ({
             instruction: step.maneuver?.instruction || '',
             distance: step.distance / 1000,
             duration: Math.ceil(step.duration / 60),

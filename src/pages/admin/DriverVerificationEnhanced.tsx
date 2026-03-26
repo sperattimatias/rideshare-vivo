@@ -114,7 +114,7 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
       if (error) throw error;
 
       const driversWithEmail = await Promise.all(
-        (data || []).map(async (driver: any) => {
+        (data || []).map(async (driver: unknown) => {
           const { data: authUser } = await supabase.auth.admin.getUserById(driver.user_id);
           return {
             ...driver,
@@ -126,7 +126,7 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
         })
       );
 
-      setDrivers(driversWithEmail as any);
+      setDrivers(driversWithEmail as unknown);
     } catch (error) {
       console.error('Error fetching drivers:', error);
     } finally {
@@ -147,7 +147,7 @@ export default function DriverVerificationEnhanced({ onBack }: DriverVerificatio
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      setVerificationHistory(data as any);
+      setVerificationHistory(data as unknown);
     }
   }
 

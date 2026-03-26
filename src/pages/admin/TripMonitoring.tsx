@@ -43,8 +43,8 @@ export function TripMonitoring({ onBack }: TripMonitoringProps) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'active' | 'completed' | 'cancelled' | 'all'>('active');
   const [selectedTrip, setSelectedTrip] = useState<TripWithDetails | null>(null);
-  const [tripDetails, setTripDetails] = useState<any>(null);
-  const [gpsHistory, setGpsHistory] = useState<any[]>([]);
+  const [tripDetails, setTripDetails] = useState<unknown>(null);
+  const [gpsHistory, setGpsHistory] = useState<unknown[]>([]);
   const [useRealMap, setUseRealMap] = useState(false);
 
   useEffect(() => {
