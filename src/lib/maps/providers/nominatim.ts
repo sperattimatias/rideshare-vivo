@@ -259,6 +259,7 @@ export class NominatimProvider implements MapProvider {
       bounds?: { minLat: number; maxLat: number; minLon: number; maxLon: number };
     }
   ): Promise<Suggestion[]> {
+    void options;
     if (!query || query.trim().length < 3) {
       return [];
     }
@@ -272,6 +273,7 @@ export class NominatimProvider implements MapProvider {
     destination: Coordinates,
     options?: { alternatives?: boolean; steps?: boolean }
   ): Promise<RouteResult> {
+    void options;
     const distance = this.calculateDistanceKm(origin.lat, origin.lon, destination.lat, destination.lon);
     const duration = this.calculateEstimatedDurationMinutes(distance);
 
@@ -292,6 +294,7 @@ export class NominatimProvider implements MapProvider {
   }
 
   getStaticMapUrl(options: StaticMapOptions): string {
+    void options;
     return '';
   }
 

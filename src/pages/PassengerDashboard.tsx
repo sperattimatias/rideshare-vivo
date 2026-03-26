@@ -4,7 +4,6 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { NotificationCenter } from '../components/NotificationCenter';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { RequestRide } from './passenger/RequestRide';
 import { ActiveRide } from './passenger/ActiveRide';
 import { RideHistory } from './passenger/RideHistory';
@@ -12,6 +11,8 @@ import { RateTrip } from './passenger/RateTrip';
 import { PayTrip } from './passenger/PayTrip';
 import { Support } from './passenger/Support';
 import type { Database } from '../lib/database.types';
+import { getPassengerDashboardData } from '../services/passengers/passengerService';
+import { getUnreadSupportMessageCount } from '../services/support/supportService';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type PassengerRow = Database['public']['Tables']['passengers']['Row'];
@@ -40,27 +41,8 @@ export function PassengerDashboard() {
     if (!profile) return;
 
     try {
-      const { data: conversations } = await supabase
-        .from('support_conversations')
-        .select('id')
-        .eq('user_id', profile.id)
-        .in('status', ['OPEN', 'IN_PROGRESS', 'WAITING_RESPONSE']);
-
-      if (!conversations || conversations.length === 0) {
-        setUnreadMessages(0);
-        return;
-      }
-
-      const conversationIds = conversations.map((c) => c.id);
-
-      const { count } = await supabase
-        .from('support_conversation_messages')
-        .select('*', { count: 'exact', head: true })
-        .in('conversation_id', conversationIds)
-        .neq('sender_id', profile.id)
-        .is('read_at', null);
-
-      setUnreadMessages(count || 0);
+      const unreadCount = await getUnreadSupportMessageCount(profile.id);
+      setUnreadMessages(unreadCount);
     } catch (error) {
       console.error('Error fetching unread messages:', error);
     }
@@ -70,37 +52,10 @@ export function PassengerDashboard() {
     if (!profile) return;
 
     try {
-      const { data: passengerData, error: passengerError } = await supabase
-        .from('passengers')
-        .select('*')
-        .eq('user_id', profile.id)
-        .maybeSingle();
-
-      if (passengerError) throw passengerError;
-      setPassenger(passengerData);
-
-      if (passengerData) {
-        const { data: activeTrips } = await supabase
-          .from('trips')
-          .select('*')
-          .eq('passenger_id', passengerData.id)
-          .in('status', ['REQUESTED', 'ACCEPTED', 'DRIVER_ARRIVING', 'DRIVER_ARRIVED', 'IN_PROGRESS'])
-          .order('requested_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        setActiveTrip(activeTrips);
-
-        const { data: recent } = await supabase
-          .from('trips')
-          .select('*')
-          .eq('passenger_id', passengerData.id)
-          .in('status', ['COMPLETED', 'CANCELLED_BY_PASSENGER', 'CANCELLED_BY_DRIVER'])
-          .order('requested_at', { ascending: false })
-          .limit(3);
-
-        setRecentTrips(recent || []);
-      }
+      const dashboardData = await getPassengerDashboardData(profile.id);
+      setPassenger(dashboardData.passenger);
+      setActiveTrip(dashboardData.activeTrip);
+      setRecentTrips(dashboardData.recentTrips);
     } catch (error) {
       console.error('Error fetching passenger data:', error);
     } finally {
