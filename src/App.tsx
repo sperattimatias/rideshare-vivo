@@ -2,6 +2,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useState, useEffect, lazy, Suspense, useMemo } from 'react';
 import { isUserAdmin } from './services/admin/adminService';
 import { getDriverIdByUserId } from './services/drivers/driverService';
+import { canAccessPath, getRoleHomePath } from './lib/routing/routeGuards';
 
 import { Login } from './pages/auth/Login';
 import { SignUp } from './pages/auth/SignUp';
@@ -146,9 +147,7 @@ function AppContent() {
 
   const roleHomePath = useMemo(() => {
     if (!profile) return '/';
-    if (isAdmin || profile.user_type === 'ADMIN') return '/admin';
-    if (profile.user_type === 'DRIVER') return '/driver';
-    return '/passenger';
+    return getRoleHomePath({ userType: profile.user_type, isAdminRecord: isAdmin });
   }, [isAdmin, profile]);
 
   if (loading || checkingAdmin) {
@@ -196,17 +195,7 @@ function AppContent() {
   const isDriver = profile.user_type === 'DRIVER';
   const canAccessAdmin = isAdmin || profile.user_type === 'ADMIN';
 
-  if (path.startsWith('/passenger') && !isPassenger) {
-    navigate(roleHomePath, true);
-    return <LoadingScreen />;
-  }
-
-  if (path.startsWith('/driver') && !isDriver) {
-    navigate(roleHomePath, true);
-    return <LoadingScreen />;
-  }
-
-  if (path.startsWith('/admin') && !canAccessAdmin) {
+  if (!canAccessPath(path, { userType: profile.user_type, isAdminRecord: isAdmin })) {
     navigate(roleHomePath, true);
     return <LoadingScreen />;
   }
