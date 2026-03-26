@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Car, User, MapPin, Navigation } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { fromDbGeographyPoint } from '../lib/geospatial';
 
 interface Driver {
   id: string;
@@ -104,7 +105,7 @@ export function LiveMap({ className = '' }: LiveMapProps) {
         .map((d: any) => {
           if (!d.current_location) return null;
 
-          const coords = parsePostGISPoint(d.current_location);
+          const coords = fromDbGeographyPoint(d.current_location);
           if (!coords) return null;
 
           return {
@@ -169,19 +170,6 @@ export function LiveMap({ className = '' }: LiveMapProps) {
       }
     } catch (error) {
       console.error('Error loading map data:', error);
-    }
-  };
-
-  const parsePostGISPoint = (point: string): { lat: number; lon: number } | null => {
-    try {
-      const match = point.match(/POINT\(([^ ]+) ([^ ]+)\)/);
-      if (!match) return null;
-      return {
-        lon: parseFloat(match[1]),
-        lat: parseFloat(match[2]),
-      };
-    } catch {
-      return null;
     }
   };
 

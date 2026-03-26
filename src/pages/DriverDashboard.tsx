@@ -4,7 +4,6 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { NotificationCenter } from '../components/NotificationCenter';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { CompleteProfile } from './driver/CompleteProfile';
 import { DriverProfile } from './driver/DriverProfile';
 import { AvailabilityToggle } from './driver/AvailabilityToggle';
@@ -13,7 +12,8 @@ import { ActiveTrip } from './driver/ActiveTrip';
 import { Earnings } from './driver/Earnings';
 import { Support } from './driver/Support';
 import type { Database } from '../lib/database.types';
-import { calculateDriverEarnings } from '../lib/pricing';
+import { getDriverByUserId, getDriverWeeklyEarnings } from '../services/drivers/driverService';
+import { getUnreadSupportMessageCount } from '../services/support/supportService';
 
 type DriverRow = Database['public']['Tables']['drivers']['Row'];
 
@@ -42,27 +42,8 @@ export function DriverDashboard() {
     if (!profile) return;
 
     try {
-      const { data: conversations } = await supabase
-        .from('support_conversations')
-        .select('id')
-        .eq('user_id', profile.id)
-        .in('status', ['OPEN', 'IN_PROGRESS', 'WAITING_RESPONSE']);
-
-      if (!conversations || conversations.length === 0) {
-        setUnreadMessages(0);
-        return;
-      }
-
-      const conversationIds = conversations.map((c) => c.id);
-
-      const { count } = await supabase
-        .from('support_conversation_messages')
-        .select('*', { count: 'exact', head: true })
-        .in('conversation_id', conversationIds)
-        .neq('sender_id', profile.id)
-        .is('read_at', null);
-
-      setUnreadMessages(count || 0);
+      const unreadCount = await getUnreadSupportMessageCount(profile.id);
+      setUnreadMessages(unreadCount);
     } catch (error) {
       console.error('Error fetching unread messages:', error);
     }
@@ -72,13 +53,7 @@ export function DriverDashboard() {
     if (!profile) return;
 
     try {
-      const { data, error } = await supabase
-        .from('drivers')
-        .select('*')
-        .eq('user_id', profile.id)
-        .maybeSingle();
-
-      if (error) throw error;
+      const data = await getDriverByUserId(profile.id);
       setDriver(data);
     } catch (error) {
       console.error('Error fetching driver data:', error);
@@ -91,23 +66,7 @@ export function DriverDashboard() {
     if (!driver) return;
 
     try {
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - 7);
-
-      const { data, error } = await supabase
-        .from('trips')
-        .select('final_fare')
-        .eq('driver_id', driver.id)
-        .eq('status', 'COMPLETED')
-        .gte('completed_at', weekStart.toISOString());
-
-      if (error) throw error;
-
-      const total = data.reduce(
-        (sum, trip) => sum + (trip.final_fare ? calculateDriverEarnings(trip.final_fare) : 0),
-        0
-      );
-
+      const total = await getDriverWeeklyEarnings(driver.id);
       setWeeklyEarnings(total);
     } catch (error) {
       console.error('Error fetching weekly earnings:', error);

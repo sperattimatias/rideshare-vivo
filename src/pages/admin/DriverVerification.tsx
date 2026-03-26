@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, CheckCircle, XCircle, AlertCircle, User, Car, FileText, ExternalLink } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { AdminLoadingState, AdminEmptyState } from '../../components/admin/AdminStates';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
@@ -262,7 +263,7 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-gray-900">{profile?.full_name}</p>
-                    <p className="text-sm text-gray-600">{profile?.email}</p>
+                    <p className="text-sm text-gray-600">Email no disponible</p>
                   </div>
                 </div>
 
@@ -279,14 +280,12 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">DNI</p>
-                    <p className="font-medium text-gray-900">{selectedDriver.dni || 'No registrado'}</p>
+                    <p className="font-medium text-gray-900">No registrado</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Fecha de nacimiento</p>
                     <p className="font-medium text-gray-900">
-                      {selectedDriver.birth_date
-                        ? new Date(selectedDriver.birth_date).toLocaleDateString('es-AR')
-                        : 'No registrado'}
+                      No registrado
                     </p>
                   </div>
                 </div>
@@ -325,7 +324,7 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
                 <div>
                   <p className="text-sm text-gray-600">Capacidad</p>
                   <p className="font-medium text-gray-900">
-                    {selectedDriver.vehicle_capacity} pasajeros
+                    No especificada
                   </p>
                 </div>
               </div>
@@ -339,11 +338,11 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
             </div>
 
             <div className="grid md:grid-cols-3 gap-4">
-              {selectedDriver.license_photo_url && (
+              {selectedDriver.driver_license_photo_url && (
                 <div className="border border-gray-200 rounded-lg p-4">
                   <p className="text-sm font-medium text-gray-900 mb-2">Licencia de conducir</p>
                   <a
-                    href={selectedDriver.license_photo_url}
+                    href={selectedDriver.driver_license_photo_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
@@ -354,11 +353,11 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
                 </div>
               )}
 
-              {selectedDriver.vehicle_registration_url && (
+              {selectedDriver.vehicle_registration_photo_url && (
                 <div className="border border-gray-200 rounded-lg p-4">
                   <p className="text-sm font-medium text-gray-900 mb-2">Registro del vehículo</p>
                   <a
-                    href={selectedDriver.vehicle_registration_url}
+                    href={selectedDriver.vehicle_registration_photo_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
@@ -369,11 +368,11 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
                 </div>
               )}
 
-              {selectedDriver.insurance_url && (
+              {selectedDriver.insurance_photo_url && (
                 <div className="border border-gray-200 rounded-lg p-4">
                   <p className="text-sm font-medium text-gray-900 mb-2">Seguro del vehículo</p>
                   <a
-                    href={selectedDriver.insurance_url}
+                    href={selectedDriver.insurance_photo_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
@@ -385,9 +384,9 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
               )}
             </div>
 
-            {!selectedDriver.license_photo_url &&
-              !selectedDriver.vehicle_registration_url &&
-              !selectedDriver.insurance_url && (
+            {!selectedDriver.driver_license_photo_url &&
+              !selectedDriver.vehicle_registration_photo_url &&
+              !selectedDriver.insurance_photo_url && (
                 <p className="text-sm text-gray-600">No hay documentos cargados</p>
               )}
           </Card>
@@ -600,7 +599,7 @@ export function DriverVerification({ onBack }: DriverVerificationProps) {
                       <div className="grid md:grid-cols-3 gap-4 text-sm">
                         <div>
                           <p className="text-gray-600">Email</p>
-                          <p className="font-medium text-gray-900">{profile?.email}</p>
+                          <p className="font-medium text-gray-900">No disponible</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Vehículo</p>

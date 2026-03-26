@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Brain, AlertTriangle, TrendingUp, MapPin, Settings, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Card } from '../../components/Card';
+import { AdminLoadingState, AdminEmptyState } from '../../components/admin/AdminStates';
 import { Button } from '../../components/Button';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { STRINGS } from '../../lib/strings';
@@ -92,14 +93,7 @@ export default function IntelligenceCenter({ onBack }: IntelligenceCenterProps) 
   const highAlerts = alerts.filter((a) => a.severity === 'HIGH').length;
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">{STRINGS.messages.loadingIntelligence}</p>
-        </div>
-      </div>
-    );
+    return <AdminLoadingState message={STRINGS.messages.loadingIntelligence} />;
   }
 
   return (

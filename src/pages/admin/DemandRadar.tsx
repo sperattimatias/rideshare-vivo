@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { MapPin, TrendingUp, Clock, DollarSign, RefreshCw, ArrowLeft, Map } from 'lucide-react';
+import { MapPin, TrendingUp, Clock, DollarSign, RefreshCw, ArrowLeft, Map as MapIcon } from 'lucide-react';
 import { Card } from '../../components/Card';
+import { AdminLoadingState, AdminEmptyState } from '../../components/admin/AdminStates';
 import { Button } from '../../components/Button';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { STRINGS } from '../../lib/strings';
 import { LeafletMap } from '../../components/LeafletMap';
+import { LiveMap } from '../../components/LiveMap';
 import {
   getDemandHeatmap,
   getHotZones,
@@ -21,9 +23,6 @@ export default function DemandRadar({ onBack }: DemandRadarProps) {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [zoneDetails, setZoneDetails] = useState<DemandAnalytics[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
   const [useRealMap, setUseRealMap] = useState(false);
 
   useEffect(() => {
@@ -143,7 +142,7 @@ export default function DemandRadar({ onBack }: DemandRadarProps) {
               variant="outline"
               onClick={() => setUseRealMap(!useRealMap)}
             >
-              <Map className="w-4 h-4 mr-2" />
+              <MapIcon className="w-4 h-4 mr-2" />
               {useRealMap ? 'Mapa Simple' : 'Mapa Real (OSM)'}
             </Button>
             <Button variant="outline" onClick={loadHotZones}>
@@ -191,7 +190,7 @@ export default function DemandRadar({ onBack }: DemandRadarProps) {
                 size="sm"
                 onClick={() => setUseRealMap(!useRealMap)}
               >
-                <Map className="w-4 h-4 mr-2" />
+                <MapIcon className="w-4 h-4 mr-2" />
                 {useRealMap ? 'Mapa Simple' : 'Mapa Real (OSM)'}
               </Button>
               <div className="flex items-center gap-2">
