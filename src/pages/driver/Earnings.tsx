@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, DollarSign, TrendingUp, Calendar, Clock, MapPin } from 'lucide-react';
 import { Card } from '../../components/Card';
-import { Button } from '../../components/Button';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { calculateDriverEarnings } from '../../lib/pricing';

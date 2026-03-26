@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Power, MapPin, Navigation, AlertCircle } from 'lucide-react';
 import { Card } from '../../components/Card';
-import { Button } from '../../components/Button';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
+import { toDbGeographyPoint } from '../../lib/geospatial';
 
 type DriverRow = Database['public']['Tables']['drivers']['Row'];
 
@@ -13,7 +13,6 @@ interface AvailabilityToggleProps {
 }
 
 export function AvailabilityToggle({ driver, onUpdate }: AvailabilityToggleProps) {
-  const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -55,7 +54,10 @@ export function AvailabilityToggle({ driver, onUpdate }: AvailabilityToggleProps
         if ('geolocation' in navigator) {
           navigator.geolocation.getCurrentPosition(
             async (position) => {
-              const locationPoint = `POINT(${position.coords.longitude} ${position.coords.latitude})`;
+              const locationPoint = toDbGeographyPoint({
+                lat: position.coords.latitude,
+                lon: position.coords.longitude,
+              });
 
               await supabase
                 .from('drivers')

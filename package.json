@@ -9,7 +9,10 @@
     "lint": "eslint .",
     "ci:check": "npm run lint && npm run typecheck && npm run build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "test": "npm run test:compile && node --test .tmp-test/tests/**/*.test.js",
+    "test:watch": "npm run test:compile && node --test --watch .tmp-test/tests/**/*.test.js",
+    "test:compile": "rm -rf .tmp-test && tsc -p tsconfig.tests.json"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

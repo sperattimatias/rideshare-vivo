@@ -190,6 +190,6 @@ export const STRINGS = {
 export type StringKey = keyof typeof STRINGS;
 
 export const getString = (category: StringKey, key: string): string => {
-  const categoryStrings = STRINGS[category] as Record<string, any>;
+  const categoryStrings = STRINGS[category] as Record<string, string>;
   return categoryStrings?.[key] || key;
 };

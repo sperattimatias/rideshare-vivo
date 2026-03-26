@@ -110,7 +110,7 @@ export function ChatBox({
 
       if (error) throw error;
 
-      const messagesWithNames = (data || []).map((msg: any) => ({
+      const messagesWithNames = (data || []).map((msg: unknown) => ({
         ...msg,
         sender_name: msg.user_profiles?.full_name || 'Usuario',
       }));
@@ -139,7 +139,7 @@ export function ChatBox({
           table: 'support_conversation_messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        async (payload: any) => {
+        async (payload: unknown) => {
           const { data: userData } = await supabase
             .from('user_profiles')
             .select('full_name')

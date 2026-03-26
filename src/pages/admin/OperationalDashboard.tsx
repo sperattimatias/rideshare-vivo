@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
 import {
-  Activity,
   Users,
   Car,
   AlertCircle,
-  TrendingUp,
   MapPin,
-  DollarSign,
   Clock,
   ArrowLeft,
   Map,
@@ -19,9 +16,9 @@ import { LiveMap } from '../../components/LiveMap';
 import { LeafletMap } from '../../components/LeafletMap';
 
 interface DashboardStats {
-  activeTrips: any[];
-  openIncidents: any[];
-  driversStatus: any[];
+  activeTrips: unknown[];
+  openIncidents: unknown[];
+  driversStatus: unknown[];
 }
 
 interface OperationalDashboardProps {
@@ -72,7 +69,6 @@ export default function OperationalDashboard({ onBack }: OperationalDashboardPro
   const criticalIncidents = stats.openIncidents.filter(
     (i) => i.severity === 'CRITICAL'
   ).length;
-  const highIncidents = stats.openIncidents.filter((i) => i.severity === 'HIGH').length;
 
   if (loading) {
     return (

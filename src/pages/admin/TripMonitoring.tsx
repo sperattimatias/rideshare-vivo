@@ -42,9 +42,8 @@ export function TripMonitoring({ onBack }: TripMonitoringProps) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'active' | 'completed' | 'cancelled' | 'all'>('active');
   const [selectedTrip, setSelectedTrip] = useState<TripWithDetails | null>(null);
-  const [tripDetails, setTripDetails] = useState<any>(null);
-  const [gpsHistory, setGpsHistory] = useState<any[]>([]);
-  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [tripDetails, setTripDetails] = useState<unknown>(null);
+  const [gpsHistory, setGpsHistory] = useState<unknown[]>([]);
   const [useRealMap, setUseRealMap] = useState(false);
 
   useEffect(() => {
@@ -171,7 +170,6 @@ export function TripMonitoring({ onBack }: TripMonitoringProps) {
   };
 
   async function loadTripDetails(tripId: string) {
-    setLoadingDetails(true);
     try {
       const [details, gps] = await Promise.all([
         getTripDetails(tripId),
@@ -181,8 +179,6 @@ export function TripMonitoring({ onBack }: TripMonitoringProps) {
       setGpsHistory(gps);
     } catch (error) {
       console.error('Error loading trip details:', error);
-    } finally {
-      setLoadingDetails(false);
     }
   }
 
@@ -285,7 +281,7 @@ export function TripMonitoring({ onBack }: TripMonitoringProps) {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">{passengerProfile.full_name}</p>
-                    <p className="text-sm text-gray-600">{passengerProfile.email}</p>
+                    <p className="text-sm text-gray-600">Email no disponible</p>
                     {passengerProfile.phone && (
                       <p className="text-sm text-gray-600">{passengerProfile.phone}</p>
                     )}

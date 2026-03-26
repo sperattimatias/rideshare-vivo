@@ -17,7 +17,6 @@ import {
   getStatusColor,
   getPriorityLabel,
   getStatusLabel,
-  type SupportDepartment,
   type SupportCategory,
   type SupportConversation,
 } from '../../lib/supportSystem';
@@ -38,11 +37,9 @@ const QUICK_QUESTIONS = [
 export function Support({ onBack }: SupportProps) {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<SupportConversation[]>([]);
-  const [departments, setDepartments] = useState<SupportDepartment[]>([]);
   const [categories, setCategories] = useState<SupportCategory[]>([]);
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
-  const [showRating, setShowRating] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showQuickQuestions, setShowQuickQuestions] = useState(true);
 
@@ -65,14 +62,13 @@ export function Support({ onBack }: SupportProps) {
     if (!user) return;
 
     try {
-      const [convs, depts, cats] = await Promise.all([
+      const [convs, , cats] = await Promise.all([
         fetchUserConversations(user.id),
         fetchDepartments(),
         fetchCategories(),
       ]);
 
       setConversations(convs);
-      setDepartments(depts);
       setCategories(cats);
     } catch (error) {
       console.error('Error loading data:', error);

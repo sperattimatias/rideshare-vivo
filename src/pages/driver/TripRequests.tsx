@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Clock, DollarSign, User, Navigation, Phone, CheckCircle, XCircle } from 'lucide-react';
+import { MapPin, Clock, DollarSign, User, Navigation, CheckCircle, XCircle } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
+import { FeedbackBanner } from '../../components/FeedbackBanner';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 import { calculateDistanceKm, formatDistance, isValidCoordinate } from '../../lib/geo';
 import { calculateDriverEarnings } from '../../lib/pricing';
+import { fromDbGeographyPoint } from '../../lib/geospatial';
+import { getTraceId, logClientError, logOperationalEvent } from '../../lib/observability';
 
 type TripRow = Database['public']['Tables']['trips']['Row'];
 type PassengerRow = Database['public']['Tables']['passengers']['Row'];
@@ -27,6 +30,7 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
   const [accepting, setAccepting] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [driverLocation, setDriverLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const [feedback, setFeedback] = useState<{ tone: 'error' | 'info'; message: string } | null>(null);
 
   useEffect(() => {
     if (isOnline) {
@@ -51,13 +55,10 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
       if (error) throw error;
 
       if (data?.current_location) {
-        try {
-          const location = JSON.parse(data.current_location);
-          if (location.lat && location.lon &&
-              isValidCoordinate(location.lat, location.lon)) {
-            setDriverLocation({ lat: location.lat, lon: location.lon });
-          }
-        } catch {
+        const location = fromDbGeographyPoint(data.current_location);
+        if (location && isValidCoordinate(location.lat, location.lon)) {
+          setDriverLocation(location);
+        } else {
           setDriverLocation(null);
         }
       }
@@ -99,20 +100,39 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
       const { data, error } = await supabase
         .rpc('accept_trip', {
           p_trip_id: tripId,
-          p_driver_id: driverId,
         });
 
       if (error) throw error;
 
       const result = data?.[0];
       if (!result?.success) {
+        const traceId = getTraceId();
+        setFeedback({
+          tone: 'info',
+          message: `${result?.message || 'No se pudo aceptar el viaje'} (trace: ${traceId.slice(0, 8)})`,
+        });
+        await logOperationalEvent({
+          domain: 'TRIP_ACCEPTANCE',
+          action: 'ACCEPT_TRIP',
+          status: 'REJECTED',
+          entityId: tripId,
+          metadata: { code: result?.code ?? 'UNKNOWN', traceId },
+        });
         await fetchTripRequests();
         return;
       }
 
+      await logOperationalEvent({
+        domain: 'TRIP_ACCEPTANCE',
+        action: 'ACCEPT_TRIP',
+        status: 'SUCCESS',
+        entityId: tripId,
+      });
       onAccept();
     } catch (error) {
-      console.error('Error al aceptar viaje:', error);
+      const traceId = getTraceId();
+      logClientError('ACCEPT_TRIP_FAILED', error, { tripId, traceId });
+      setFeedback({ tone: 'error', message: `Error al aceptar el viaje (trace: ${traceId.slice(0, 8)})` });
     } finally {
       setAccepting(null);
     }
@@ -192,6 +212,13 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
 
   return (
     <div className="space-y-4">
+      {feedback && (
+        <FeedbackBanner
+          tone={feedback.tone}
+          title={feedback.tone === 'error' ? 'No se pudo completar la operación' : 'Acción no permitida'}
+          message={feedback.message}
+        />
+      )}
       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
@@ -323,17 +350,15 @@ export function TripRequests({ driverId, isOnline, onAccept }: TripRequestsProps
                 </Button>
               </div>
 
-              {trip.scheduled_for && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-yellow-600" />
-                    <p className="text-sm text-yellow-800">
-                      Viaje programado para:{' '}
-                      {new Date(trip.scheduled_for).toLocaleString('es-AR')}
-                    </p>
-                  </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-gray-600" />
+                  <p className="text-sm text-gray-800">
+                    Solicitud recibida:{' '}
+                    {new Date(trip.requested_at).toLocaleString('es-AR')}
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
           </Card>
         );

@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { createRequestContext, logError, logInfo } from "../_shared/observability.ts";
+import { requireEnv } from "../_shared/env.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +9,42 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+function htmlError(message: string, status = 500): Response {
+  return new Response(
+    `<!DOCTYPE html>
+      <html>
+        <head>
+          <title>Error de Conexión</title>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+            .container { background: white; padding: 40px; border-radius: 10px; max-width: 500px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #e74c3c; }
+            p { color: #555; margin: 20px 0; }
+            button { background: #3498db; color: white; border: none; padding: 12px 30px; border-radius: 5px; cursor: pointer; font-size: 16px; }
+            button:hover { background: #2980b9; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Error de Conexión</h1>
+            <p>Hubo un problema al conectar tu cuenta de Mercado Pago.</p>
+            <p>${message}</p>
+            <button onclick="window.close()">Cerrar</button>
+          </div>
+        </body>
+      </html>`,
+    {
+      status,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+      },
+    },
+  );
+}
+
 Deno.serve(async (req: Request) => {
+  const context = createRequestContext(req, "mp-oauth-callback");
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -16,69 +53,76 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Configuración de Supabase no disponible');
-    }
+    const { SUPABASE_URL: supabaseUrl, SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey } =
+      requireEnv(["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const url = new URL(req.url);
-    const code = url.searchParams.get('code');
-    const state = url.searchParams.get('state');
-    const error = url.searchParams.get('error');
+    const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
+    const error = url.searchParams.get("error");
 
     if (error) {
-      console.error('OAuth error:', error);
-      return new Response(
-        `<!DOCTYPE html>
-        <html>
-          <head>
-            <title>Error de Conexión</title>
-            <style>
-              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
-              .container { background: white; padding: 40px; border-radius: 10px; max-width: 500px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-              h1 { color: #e74c3c; }
-              p { color: #555; margin: 20px 0; }
-              button { background: #3498db; color: white; border: none; padding: 12px 30px; border-radius: 5px; cursor: pointer; font-size: 16px; }
-              button:hover { background: #2980b9; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Error de Conexión</h1>
-              <p>Hubo un problema al conectar tu cuenta de Mercado Pago.</p>
-              <p>Error: ${error}</p>
-              <button onclick="window.close()">Cerrar</button>
-            </div>
-          </body>
-        </html>`,
-        {
-          status: 400,
-          headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-          },
-        }
-      );
+      return htmlError(`Error: ${error}`, 400);
     }
 
     if (!code || !state) {
-      throw new Error('Código o estado no proporcionado');
+      throw new Error("Código o estado no proporcionado");
     }
 
-    const [driverId] = state.split('|');
+    const { data: oauthSession, error: consumeSessionError } = await supabase
+      .from("mp_oauth_sessions")
+      .update({ consumed_at: new Date().toISOString() })
+      .eq("state", state)
+      .is("consumed_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .select("id, driver_id, user_id")
+      .maybeSingle();
+
+    if (consumeSessionError) {
+      logError(context, "failed to consume oauth session", consumeSessionError, { state_prefix: state.slice(0, 8) });
+      throw new Error("No se pudo validar la sesión OAuth");
+    }
+
+    if (!oauthSession) {
+      throw new Error("Sesión OAuth inválida, expirada o ya utilizada");
+    }
+
+    const driverId = oauthSession.driver_id;
+
+    const { data: driver, error: driverError } = await supabase
+      .from("drivers")
+      .select("id, user_id")
+      .eq("id", driverId)
+      .maybeSingle();
+
+    if (driverError || !driver) {
+      throw new Error("Conductor no encontrado para la sesión OAuth");
+    }
+
+    if (driver.user_id !== oauthSession.user_id) {
+      await supabase
+        .from("driver_mp_linking_logs")
+        .insert({
+          driver_id: driverId,
+          event_type: "LINK_FAILED",
+          error_message: "Inconsistencia entre sesión OAuth y conductor",
+          metadata: { oauth_session_id: oauthSession.id },
+        });
+
+      throw new Error("Inconsistencia de sesión OAuth detectada");
+    }
 
     const { data: settings, error: settingsError } = await supabase
-      .from('system_settings')
-      .select('key, value')
-      .eq('category', 'payment')
-      .in('key', ['mp_app_id', 'mp_client_secret', 'mp_environment']);
+      .from("system_settings")
+      .select("key, value")
+      .eq("category", "payment")
+      .in("key", ["mp_app_id", "mp_client_secret", "mp_environment"]);
 
     if (settingsError) {
-      console.error('Error fetching settings:', settingsError);
-      throw new Error('Error al obtener configuración');
+      logError(context, "failed to fetch payment settings", settingsError);
+      throw new Error("Error al obtener configuración");
     }
 
     const settingsMap: Record<string, string> = {};
@@ -90,35 +134,48 @@ Deno.serve(async (req: Request) => {
     const clientSecret = settingsMap.mp_client_secret;
 
     if (!appId || !clientSecret) {
-      throw new Error('Credenciales de Mercado Pago no configuradas');
+      throw new Error("Credenciales de Mercado Pago no configuradas");
     }
 
-    const environment = settingsMap.mp_environment || 'test';
-    const baseUrl = environment === 'production'
-      ? 'https://api.mercadopago.com'
-      : 'https://api.mercadopago.com';
+    const environment = settingsMap.mp_environment || "test";
+    const baseUrl = environment === "production"
+      ? "https://api.mercadopago.com"
+      : "https://api.mercadopago.com";
 
     const redirectUri = `${supabaseUrl}/functions/v1/mp-oauth-callback`;
 
     const tokenResponse = await fetch(`${baseUrl}/oauth/token`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify({
         client_id: appId,
         client_secret: clientSecret,
-        code: code,
-        grant_type: 'authorization_code',
+        code,
+        grant_type: "authorization_code",
         redirect_uri: redirectUri,
       }),
     });
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.text();
-      console.error('Token exchange error:', errorData);
-      throw new Error('Error al obtener token de acceso');
+      logError(context, "token exchange failed", new Error("MP_TOKEN_EXCHANGE_ERROR"), { response_body: errorData, response_status: tokenResponse.status });
+
+      await supabase
+        .from("driver_mp_linking_logs")
+        .insert({
+          driver_id: driverId,
+          event_type: "LINK_FAILED",
+          error_message: "Error al obtener token de acceso",
+          metadata: {
+            oauth_session_id: oauthSession.id,
+            response_status: tokenResponse.status,
+          },
+        });
+
+      throw new Error("Error al obtener token de acceso");
     }
 
     const tokenData = await tokenResponse.json();
@@ -127,26 +184,26 @@ Deno.serve(async (req: Request) => {
     expiresAt.setSeconds(expiresAt.getSeconds() + (tokenData.expires_in || 15552000));
 
     const { error: revokeError } = await supabase
-      .from('driver_oauth_tokens')
+      .from("driver_oauth_tokens")
       .update({
         is_active: false,
-        revoked_at: new Date().toISOString()
+        revoked_at: new Date().toISOString(),
       })
-      .eq('driver_id', driverId)
-      .eq('is_active', true);
+      .eq("driver_id", driverId)
+      .eq("is_active", true);
 
     if (revokeError) {
-      console.error('Error revoking old tokens:', revokeError);
+      logError(context, "failed to revoke old tokens", revokeError, { driver_id: driverId });
     }
 
     const { error: insertError } = await supabase
-      .from('driver_oauth_tokens')
+      .from("driver_oauth_tokens")
       .insert({
         driver_id: driverId,
         mp_user_id: tokenData.user_id.toString(),
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token,
-        token_type: tokenData.token_type || 'Bearer',
+        token_type: tokenData.token_type || "Bearer",
         expires_at: expiresAt.toISOString(),
         scope: tokenData.scope,
         public_key: tokenData.public_key,
@@ -154,37 +211,53 @@ Deno.serve(async (req: Request) => {
       });
 
     if (insertError) {
-      console.error('Error saving token:', insertError);
-      throw new Error('Error al guardar token de acceso');
+      logError(context, "failed to persist oauth token", insertError, { driver_id: driverId });
+      throw new Error("Error al guardar token de acceso");
     }
 
     const { error: updateDriverError } = await supabase
-      .from('drivers')
+      .from("drivers")
       .update({
         mp_seller_id: tokenData.user_id.toString(),
-        mp_oauth_status: 'AUTHORIZED',
+        mp_oauth_status: "AUTHORIZED",
         mp_oauth_connected_at: new Date().toISOString(),
-        mp_status: 'LINKED',
+        mp_status: "LINKED",
         mp_linked_at: new Date().toISOString(),
       })
-      .eq('id', driverId);
+      .eq("id", driverId);
 
     if (updateDriverError) {
-      console.error('Error updating driver:', updateDriverError);
-      throw new Error('Error al actualizar conductor');
+      logError(context, "failed to update driver oauth status", updateDriverError, { driver_id: driverId });
+      throw new Error("Error al actualizar conductor");
     }
 
-    const { error: logError } = await supabase
-      .from('driver_mp_linking_logs')
+    const { error: linkLogError } = await supabase
+      .from("driver_mp_linking_logs")
       .insert({
         driver_id: driverId,
-        action: 'LINKED',
+        event_type: "LINK_SUCCESS",
         mp_seller_id: tokenData.user_id.toString(),
+        metadata: {
+          oauth_session_id: oauthSession.id,
+        },
       });
 
-    if (logError) {
-      console.error('Error logging action:', logError);
+    if (linkLogError) {
+      logError(context, "failed to persist link success history", linkLogError, { driver_id: driverId });
     }
+
+    await supabase.from("operational_events").insert({
+      domain: "OAUTH",
+      action: "OAUTH_LINK_COMPLETED",
+      status: "SUCCESS",
+      entity_id: driverId,
+      actor_user_id: oauthSession.user_id,
+      metadata: {
+        request_id: context.requestId,
+        oauth_session_id: oauthSession.id,
+      },
+    });
+    logInfo(context, "oauth link completed", { driver_id: driverId });
 
     return new Response(
       `<!DOCTYPE html>
@@ -322,43 +395,12 @@ Deno.serve(async (req: Request) => {
       {
         status: 200,
         headers: {
-          'Content-Type': 'text/html; charset=utf-8',
+          "Content-Type": "text/html; charset=utf-8",
         },
-      }
+      },
     );
-
   } catch (error) {
-    console.error('Error in mp-oauth-callback:', error);
-    return new Response(
-      `<!DOCTYPE html>
-      <html>
-        <head>
-          <title>Error de Conexión</title>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
-            .container { background: white; padding: 40px; border-radius: 10px; max-width: 500px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            h1 { color: #e74c3c; }
-            p { color: #555; margin: 20px 0; }
-            button { background: #3498db; color: white; border: none; padding: 12px 30px; border-radius: 5px; cursor: pointer; font-size: 16px; }
-            button:hover { background: #2980b9; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>Error de Conexión</h1>
-            <p>Hubo un problema al conectar tu cuenta de Mercado Pago.</p>
-            <p>${error instanceof Error ? error.message : 'Error desconocido'}</p>
-            <button onclick="window.close()">Cerrar</button>
-          </div>
-        </body>
-      </html>`,
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-        },
-      }
-    );
+    logError(context, "mp-oauth-callback failed", error);
+    return htmlError(error instanceof Error ? error.message : "Error desconocido", 500);
   }
 });

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle, Plus, Search, Filter, Clock, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
+import { AlertCircle, Plus, Search, Clock, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import {
-  createIncident,
   updateIncidentStatus,
   addIncidentAction,
   type IncidentType,
@@ -54,7 +53,6 @@ export default function IncidentManagement({ onBack }: IncidentManagementProps) 
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
