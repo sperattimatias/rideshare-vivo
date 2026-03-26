@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, DollarSign, MapPin, Save, AlertCircle, CreditCard, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { AdminLoadingState, AdminEmptyState } from '../../components/admin/AdminStates';
 import { Input } from '../../components/Input';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { STRINGS } from '../../lib/strings';
@@ -258,14 +259,7 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">{STRINGS.messages.loadingConfiguration}</p>
-        </div>
-      </div>
-    );
+    return <AdminLoadingState message={STRINGS.messages.loadingConfiguration} />;
   }
 
   return (
@@ -787,7 +781,7 @@ export function SystemConfiguration({ onBack }: SystemConfigurationProps) {
                     </p>
                     <p className="text-xs text-gray-600">
                       Comisión: {rule.platform_commission_percent}% | Multiplicador:{' '}
-                      {rule.surge_multiplier}x
+                      {rule.surge_multiplier_max}x
                     </p>
                   </div>
                   <div className="text-right">

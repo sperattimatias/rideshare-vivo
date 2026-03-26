@@ -7,16 +7,20 @@ const corsHeaders = {
 };
 
 interface MercadoPagoNotification {
-  id: number;
-  live_mode: boolean;
-  type: string;
-  date_created: string;
-  user_id: number;
-  api_version: string;
-  action: string;
-  data: {
-    id: string;
+  type?: string;
+  topic?: string;
+  action?: string;
+  data?: {
+    id?: string;
   };
+}
+
+function normalizePaymentStatus(status: string): 'pending' | 'approved' | 'rejected' | 'refunded' | 'cancelled' {
+  if (status === 'approved' || status === 'pending' || status === 'rejected' || status === 'refunded' || status === 'cancelled') {
+    return status;
+  }
+
+  return 'pending';
 }
 
 Deno.serve(async (req: Request) => {
@@ -37,49 +41,52 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data: settings, error: settingsError } = await supabase
+    const { data: setting, error: settingsError } = await supabase
       .from('system_settings')
-      .select('key, value')
+      .select('value')
       .eq('category', 'payment')
       .eq('key', 'mp_access_token')
       .maybeSingle();
 
-    if (settingsError) {
-      console.error('Error fetching settings:', settingsError);
-      throw new Error('Error al obtener configuración de pagos');
-    }
-
-    const mpAccessToken = settings?.value;
-
-    if (!mpAccessToken) {
+    if (settingsError || !setting?.value) {
       throw new Error('MP_ACCESS_TOKEN no configurado en el sistema');
     }
 
-    const notification: MercadoPagoNotification = await req.json();
+    const url = new URL(req.url);
+    const contentType = req.headers.get('content-type') || '';
 
-    console.log('Webhook recibido:', notification);
-
-    if (notification.type !== 'payment') {
-      return new Response(
-        JSON.stringify({ message: 'Tipo de notificación no procesado' }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+    let notification: MercadoPagoNotification = {};
+    if (contentType.includes('application/json')) {
+      notification = await req.json();
     }
 
-    const paymentId = notification.data.id;
+    const notificationType = notification.type || notification.topic || url.searchParams.get('type') || url.searchParams.get('topic');
 
-    const mpResponse = await fetch(
-      `https://api.mercadopago.com/v1/payments/${paymentId}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${mpAccessToken}`,
-        },
-      }
-    );
+    if (notificationType !== 'payment') {
+      return new Response(JSON.stringify({ message: 'Tipo de notificación no procesado' }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const paymentId =
+      notification.data?.id ||
+      url.searchParams.get('data.id') ||
+      url.searchParams.get('id');
+
+    if (!paymentId) {
+      return new Response(JSON.stringify({ message: 'Notificación sin payment id' }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${setting.value}`,
+      },
+    });
 
     if (!mpResponse.ok) {
       throw new Error('Error al obtener información del pago desde Mercado Pago');
@@ -87,77 +94,62 @@ Deno.serve(async (req: Request) => {
 
     const paymentData = await mpResponse.json();
 
-    console.log('Datos del pago:', paymentData);
-
-    const tripId = paymentData.external_reference;
-    const status = paymentData.status;
-    const statusDetail = paymentData.status_detail;
-
-    const { error: updateError } = await supabase
-      .from('trip_payments')
-      .update({
-        mp_status: status,
-        mp_status_detail: statusDetail,
-        payment_method: paymentData.payment_method_id,
-        payment_method_id: paymentData.payment_method_id,
-        approved_at: status === 'approved' ? new Date().toISOString() : null,
-      })
-      .eq('trip_id', tripId);
-
-    if (updateError) {
-      console.error('Error al actualizar pago:', updateError);
-      throw updateError;
+    const externalReference = paymentData.external_reference as string | null;
+    if (!externalReference) {
+      return new Response(JSON.stringify({ message: 'Pago sin external_reference' }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    console.log(`Pago actualizado: trip_id=${tripId}, status=${status}`);
+    const normalizedStatus = normalizePaymentStatus(paymentData.status || 'pending');
 
-    if (status === 'approved') {
-      const { data: trip, error: tripError } = await supabase
-        .from('trips')
-        .select('driver_id, final_fare')
-        .eq('id', tripId)
-        .maybeSingle();
+    const { data: processResult, error: processError } = await supabase.rpc('process_trip_payment_webhook', {
+      p_external_reference: externalReference,
+      p_mp_payment_id: String(paymentData.id),
+      p_mp_status: normalizedStatus,
+      p_mp_status_detail: paymentData.status_detail || null,
+      p_payment_method: paymentData.payment_method_id || null,
+      p_payment_method_id: paymentData.payment_method_id || null,
+    });
 
-      if (!tripError && trip && trip.driver_id) {
-        const driverEarnings = trip.final_fare * 0.80;
+    if (processError) {
+      console.error('Error processing webhook in DB:', processError);
+      throw new Error('No se pudo aplicar el webhook en base de datos');
+    }
 
-        const { data: currentDriver } = await supabase
-          .from('drivers')
-          .select('total_earnings')
-          .eq('id', trip.driver_id)
-          .maybeSingle();
+    const result = Array.isArray(processResult) ? processResult[0] : processResult;
 
-        if (currentDriver) {
-          await supabase
-            .from('drivers')
-            .update({
-              total_earnings: (currentDriver.total_earnings || 0) + driverEarnings,
-            })
-            .eq('id', trip.driver_id);
-
-          console.log(`Ganancias del conductor actualizadas: +${driverEarnings}`);
-        }
-      }
+    if (!result?.processed) {
+      return new Response(JSON.stringify({ message: 'No existe pago para external_reference', externalReference }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     return new Response(
-      JSON.stringify({ success: true, status }),
+      JSON.stringify({
+        success: true,
+        status: result.status,
+        status_changed: result.status_changed,
+        earnings_applied: result.earnings_applied,
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      },
     );
   } catch (error) {
     console.error('Error en webhook:', error);
     return new Response(
       JSON.stringify({
         error: true,
-        message: error.message || 'Error al procesar webhook',
+        message: error instanceof Error ? error.message : 'Error al procesar webhook',
       }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      },
     );
   }
 });

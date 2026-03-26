@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": ".tmp-test",
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "tests/**/*.ts",
+    "src/lib/pricingMath.ts",
+    "src/lib/tripStates.ts",
+    "src/lib/geospatial.ts",
+    "src/lib/payments/paymentValidation.ts",
+    "src/lib/routing/routeGuards.ts",
+    "src/lib/database.types.ts"
+  ]
+}
