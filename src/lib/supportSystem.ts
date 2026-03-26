@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 export interface SupportDepartment {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   color: string;
   icon: string;
   is_active: boolean;
@@ -14,7 +14,7 @@ export interface SupportCategory {
   id: string;
   name: string;
   slug: string | null;
-  description: string;
+  description: string | null;
   department_id: string | null;
   requires_urgent_attention: boolean;
   is_active: boolean;
@@ -29,7 +29,7 @@ export interface SupportConversation {
   department_id: string | null;
   assigned_agent_id: string | null;
   subject: string;
-  description: string;
+  description: string | null;
   status: 'OPEN' | 'IN_PROGRESS' | 'WAITING_RESPONSE' | 'RESOLVED' | 'CLOSED';
   priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT' | 'CRITICAL';
   channel: 'CHAT' | 'TICKET';

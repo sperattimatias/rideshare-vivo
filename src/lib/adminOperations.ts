@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Json } from './database.types';
+import type { Database, Json } from './database.types';
 
 export type IncidentType = 'ACCIDENT' | 'COMPLAINT' | 'DISPUTE' | 'FRAUD' | 'SAFETY' | 'HARASSMENT' | 'LOST_ITEM' | 'OTHER';
 export type IncidentSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
@@ -138,7 +138,7 @@ export async function updateIncidentStatus(
     .eq('id', incidentId)
     .single();
 
-  const updateData: unknown = {
+  const updateData: Database['public']['Tables']['incidents']['Update'] = {
     status,
     updated_at: new Date().toISOString(),
   };

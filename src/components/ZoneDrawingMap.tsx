@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MapPin, Trash2, AlertCircle } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-import type { Marker as LeafletMarker, Polygon as LeafletPolygon } from 'leaflet';
+import type { LeafletMouseEvent, Map as LeafletMapInstance, Marker as LeafletMarker, Polygon as LeafletPolygon } from 'leaflet';
 
 interface Point {
   lat: number;
@@ -30,11 +30,11 @@ export function ZoneDrawingMap({
   existingZones = [],
 }: ZoneDrawingMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<unknown>(null);
+  const mapInstanceRef = useRef<LeafletMapInstance | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [points, setPoints] = useState<Point[]>(initialPoints);
   const markersRef = useRef<LeafletMarker[]>([]);
-  const polygonRef = useRef<unknown>(null);
+  const polygonRef = useRef<LeafletPolygon | null>(null);
   const existingPolygonsRef = useRef<LeafletPolygon[]>([]);
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export function ZoneDrawingMap({
     }
   };
 
-  const handleMapClick = async (e: unknown) => {
+  const handleMapClick = async (e: LeafletMouseEvent) => {
     const newPoint = {
       lat: e.latlng.lat,
       lon: e.latlng.lng,
@@ -125,6 +125,8 @@ export function ZoneDrawingMap({
     }
 
     points.forEach((point, index) => {
+      const map = mapInstanceRef.current;
+      if (!map) return;
       const icon = L.divIcon({
         className: 'custom-point-marker',
         html: `
@@ -144,12 +146,14 @@ export function ZoneDrawingMap({
           <p class="text-xs text-gray-600">Lat: ${point.lat.toFixed(6)}</p>
           <p class="text-xs text-gray-600">Lon: ${point.lon.toFixed(6)}</p>
         </div>`)
-        .addTo(mapInstanceRef.current);
+        .addTo(map);
 
       markersRef.current.push(marker);
     });
 
     if (points.length >= 3) {
+      const map = mapInstanceRef.current;
+      if (!map) return;
       const latLngs = points.map((p) => [p.lat, p.lon] as [number, number]);
 
       polygonRef.current = L.polygon(latLngs, {
@@ -157,7 +161,7 @@ export function ZoneDrawingMap({
         fillColor: '#8b5cf6',
         fillOpacity: 0.3,
         weight: 2,
-      }).addTo(mapInstanceRef.current);
+      }).addTo(map);
 
       const bounds = polygonRef.current.getBounds();
       mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
@@ -174,6 +178,8 @@ export function ZoneDrawingMap({
 
     existingZones.forEach((zone) => {
       if (zone.boundary_points && zone.boundary_points.length >= 3) {
+        const map = mapInstanceRef.current;
+        if (!map) return;
         const latLngs = zone.boundary_points.map(
           (p) => [p.lat, p.lon] as [number, number]
         );
@@ -191,7 +197,7 @@ export function ZoneDrawingMap({
               <p class="text-xs text-gray-600">${zone.boundary_points.length} puntos</p>
             </div>
           `)
-          .addTo(mapInstanceRef.current);
+          .addTo(map);
 
         existingPolygonsRef.current.push(polygon);
       }

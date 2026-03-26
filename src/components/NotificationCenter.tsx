@@ -1,27 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { Bell, X, Check, CheckCheck, MessageCircle, Car, CreditCard, AlertCircle, MapPin, Star, Zap } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  icon: string | null;
-  color: string;
-  link: string | null;
-  is_read: boolean;
-  read_at: string | null;
-  created_at: string;
-  play_sound: boolean;
-}
+import { mapNotificationRowToUI, type UINotification } from '../lib/notificationModels';
+import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
+import type { Database } from '../lib/database.types';
 
 interface NotificationCenterProps {
   userId: string;
   onNavigate?: (link: string) => void;
 }
 
-const iconMap: { [key: string]: unknown } = {
+type NotificationRow = Database['public']['Tables']['notifications']['Row'];
+
+const iconMap: Record<string, LucideIcon> = {
   MessageCircle,
   Car,
   CreditCard,
@@ -34,7 +26,7 @@ const iconMap: { [key: string]: unknown } = {
 
 export function NotificationCenter({ userId, onNavigate }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<UINotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [loading, setLoading] = useState(false);
@@ -70,7 +62,7 @@ export function NotificationCenter({ userId, onNavigate }: NotificationCenterPro
         .limit(50);
 
       if (error) throw error;
-      setNotifications(data || []);
+      setNotifications((data ?? []).map(mapNotificationRowToUI));
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -89,8 +81,8 @@ export function NotificationCenter({ userId, onNavigate }: NotificationCenterPro
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
-          const newNotification = payload.new as Notification;
+        (payload: RealtimePostgresInsertPayload<NotificationRow>) => {
+          const newNotification = mapNotificationRowToUI(payload.new);
           setNotifications((prev) => [newNotification, ...prev]);
 
           if (newNotification.play_sound) {
@@ -113,7 +105,7 @@ export function NotificationCenter({ userId, onNavigate }: NotificationCenterPro
     beep.play().catch(() => {});
   };
 
-  const showBrowserNotification = (notification: Notification) => {
+  const showBrowserNotification = (notification: UINotification) => {
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(notification.title, {
         body: notification.message,
@@ -162,7 +154,7 @@ export function NotificationCenter({ userId, onNavigate }: NotificationCenterPro
     }
   };
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = (notification: UINotification) => {
     if (!notification.is_read) {
       markAsRead(notification.id);
     }
@@ -192,8 +184,7 @@ export function NotificationCenter({ userId, onNavigate }: NotificationCenterPro
     ? notifications.filter(n => !n.is_read)
     : notifications;
 
-  const getIcon = (iconName: string | null) => {
-    if (!iconName) return MessageCircle;
+  const getIcon = (iconName: string) => {
     return iconMap[iconName] || MessageCircle;
   };
 
